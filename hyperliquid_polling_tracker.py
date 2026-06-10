@@ -31,7 +31,6 @@ DB_FILE = os.path.join(os.path.dirname(__file__), "seen_trades.json")
 
 def load_config():
     if not os.path.exists(CONFIG_FILE):
-        # 如果文件不存在，初始化默认结构
         return {"monitored_addresses": []}
     try:
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
@@ -49,13 +48,8 @@ def save_config(config_data):
         print(f"Error saving config: {e}")
 
 def load_seen_trades_and_offset():
-    """
-    返回 (seen_tids_set, last_update_id)
-    兼容旧版本 seen_trades.json 只是一个 list 的情况
-    """
     seen_set = set()
     last_update_id = 0
-    
     if os.path.exists(DB_FILE):
         try:
             with open(DB_FILE, "r", encoding="utf-8") as f:
@@ -68,14 +62,12 @@ def load_seen_trades_and_offset():
         except Exception as e:
             print(f"Warning: Failed to load seen_trades.json: {e}")
             
-    # 如果文件不存在且是第一次运行，我们返回 seen_set = None 标识初始化
     if not os.path.exists(DB_FILE):
         return None, 0
-        
     return seen_set, last_update_id
 
 def save_seen_trades_and_offset(seen_set, last_update_id):
-    seen_list = list(seen_set)[-3000:]  # 限制大小在 3000 条内
+    seen_list = list(seen_set)[-3000:]
     db_data = {
         "seen_tids": seen_list,
         "last_update_id": last_update_id
@@ -85,6 +77,16 @@ def save_seen_trades_and_offset(seen_set, last_update_id):
             json.dump(db_data, f, ensure_ascii=False, indent=2)
     except Exception as e:
         print(f"Error saving seen trades and offset: {e}")
+
+def html_to_discord_markdown(html_text):
+    """
+    将 Telegram 的 HTML 格式标签转换为 Discord 支持的 Markdown 格式
+    """
+    md = html_text
+    md = md.replace("<b>", "**").replace("</b>", "**")
+    md = md.replace("<i>", "*").replace("</i>", "*")
+    md = md.replace("<code>", "`").replace("</code>", "`")
+    return md
 
 def send_tg_notification(text):
     token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -102,19 +104,33 @@ def send_tg_notification(text):
     }
     try:
         resp = requests.post(url, json=data, timeout=15)
-        if resp.status_code == 200:
-            return True
-        else:
-            print(f"Telegram send failed: {resp.text}")
-            return False
+        return resp.status_code == 200
     except Exception as e:
         print(f"Telegram send exception: {e}")
         return False
 
+def send_discord_notification(text):
+    webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
+    if not webhook_url:
+        # 如果没有配置 Discord Webhook，则静默跳过
+        return True
+        
+    discord_text = html_to_discord_markdown(text)
+    payload = {
+        "content": discord_text
+    }
+    try:
+        resp = requests.post(webhook_url, json=payload, timeout=15)
+        if resp.status_code in [200, 204]:
+            return True
+        else:
+            print(f"Discord send failed with status {resp.status_code}: {resp.text}")
+            return False
+    except Exception as e:
+        print(f"Discord send exception: {e}")
+        return False
+
 def process_telegram_commands(last_update_id):
-    """
-    通过 Telegram getUpdates 读取发给机器人的新增指令，并更新 hl_tracker_config.json
-    """
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id_str = str(os.getenv("TELEGRAM_CHAT_ID", ""))
     
@@ -135,7 +151,6 @@ def process_telegram_commands(last_update_id):
             
         config_data = load_config()
         monitored = config_data.get("monitored_addresses", [])
-        
         config_changed = False
         new_last_id = last_update_id
         
@@ -148,7 +163,6 @@ def process_telegram_commands(last_update_id):
             sender_chat = message.get("chat", {})
             sender_id = str(sender_chat.get("id", ""))
             
-            # 只处理来自授权 Chat ID 的指令以保证安全
             if sender_id != chat_id_str:
                 continue
                 
@@ -156,48 +170,57 @@ def process_telegram_commands(last_update_id):
             if not text:
                 continue
                 
-            # 处理 /add 指令
             if text.startswith("/add"):
                 parts = text.split(maxsplit=2)
                 if len(parts) < 2:
-                    send_tg_notification("⚠️ <b>格式错误</b>\n正确格式: <code>/add 钱包地址 备注标签</code>")
+                    msg = "⚠️ <b>格式错误</b>\n正确格式: <code>/add 钱包地址 备注标签</code>"
+                    send_tg_notification(msg)
+                    send_discord_notification(msg)
                     continue
                 
                 addr = parts[1].lower().strip()
                 label = parts[2].strip() if len(parts) == 3 else "未命名"
                 
                 if not addr.startswith("0x") or len(addr) != 42:
-                    send_tg_notification(f"⚠️ <b>格式错误</b>\n地址 <code>{addr}</code> 似乎不是合法的 EVM/Hyperliquid 地址。")
+                    msg = f"⚠️ <b>格式错误</b>\n地址 <code>{addr}</code> 似乎不是合法的 EVM/Hyperliquid 地址。"
+                    send_tg_notification(msg)
+                    send_discord_notification(msg)
                     continue
                 
-                # 检查是否已存在
                 existing = next((item for item in monitored if item.get("address").lower() == addr), None)
                 if existing:
                     existing["label"] = label
-                    send_tg_notification(f"✅ <b>修改成功</b>\n地址已存在，已更新标签为：<b>{label}</b>\n<code>{addr}</code>")
+                    msg = f"✅ <b>修改成功</b>\n地址已存在，已更新标签为：<b>{label}</b>\n<code>{addr}</code>"
+                    send_tg_notification(msg)
+                    send_discord_notification(msg)
                 else:
                     monitored.append({"address": addr, "label": label})
-                    send_tg_notification(f"✅ <b>添加成功</b>\n已开始监控：<b>{label}</b>\n<code>{addr}</code>")
+                    msg = f"✅ <b>添加成功</b>\n已开始监控：<b>{label}</b>\n<code>{addr}</code>"
+                    send_tg_notification(msg)
+                    send_discord_notification(msg)
                 config_changed = True
                 
-            # 处理 /remove 指令
             elif text.startswith("/remove"):
                 parts = text.split(maxsplit=1)
                 if len(parts) < 2:
-                    send_tg_notification("⚠️ <b>格式错误</b>\n正确格式: <code>/remove 钱包地址</code>")
+                    msg = "⚠️ <b>格式错误</b>\n正确格式: <code>/remove 钱包地址</code>"
+                    send_tg_notification(msg)
+                    send_discord_notification(msg)
                     continue
                 
                 addr = parts[1].lower().strip()
-                
-                # 查找并删除
                 initial_len = len(monitored)
                 monitored = [item for item in monitored if item.get("address").lower() != addr]
                 
                 if len(monitored) < initial_len:
-                    send_tg_notification(f"❌ <b>移除成功</b>\n已停止监控地址：\n<code>{addr}</code>")
+                    msg = f"❌ <b>移除成功</b>\n已停止监控地址：\n<code>{addr}</code>"
+                    send_tg_notification(msg)
+                    send_discord_notification(msg)
                     config_changed = True
                 else:
-                    send_tg_notification(f"⚠️ <b>未找到该地址</b>\n监控列表中不包含地址：\n<code>{addr}</code>")
+                    msg = f"⚠️ <b>未找到该地址</b>\n监控列表中不包含地址：\n<code>{addr}</code>"
+                    send_tg_notification(msg)
+                    send_discord_notification(msg)
                     
         if config_changed:
             config_data["monitored_addresses"] = monitored
@@ -233,7 +256,6 @@ def format_fill_message(wallet_label, address, fills):
     short_addr = f"{address[:6]}...{address[-4:]}"
     lines.append(f"👤 <b>{wallet_label}</b> (<code>{short_addr}</code>)")
     
-    # 按照时间从早到晚排序交易
     sorted_fills = sorted(fills, key=lambda x: x.get("time", 0))
     
     for fill in sorted_fills:
@@ -242,26 +264,21 @@ def format_fill_message(wallet_label, address, fills):
         sz = float(fill.get("sz", 0))
         value_usd = px * sz
         
-        # 交易方向与 Emoji
-        side = fill.get("side", "")  # B=Buy, A=Sell
-        direction = fill.get("dir", "") # Open Long, Close Short etc.
+        side = fill.get("side", "")
+        direction = fill.get("dir", "")
         
-        # 如果 dir 字段不存在，做基础 fallback
         if not direction:
             direction = "买入 (Buy)" if side == "B" else "卖出 (Sell)"
             
         emoji = "🟢" if "B" in side or "Buy" in direction or "Long" in direction else "🔴"
         
-        # 仓位变动占比计算 (% of Position)
         pct_str = ""
         start_pos_str = fill.get("startPosition", "0")
         try:
             start_pos = float(start_pos_str)
             if start_pos == 0:
-                # 从零开仓，相当于占新仓位的100%
                 pct_str = " | <b>首笔建仓 (100%)</b>"
             else:
-                # 仓位占比 = 本次交易数量 / 变动前持仓绝对值
                 pct = (sz / abs(start_pos)) * 100
                 if pct > 100:
                     pct_str = f" | <b>仓位占比: {pct:.1f}% (反手/超额)</b>"
@@ -270,7 +287,6 @@ def format_fill_message(wallet_label, address, fills):
         except Exception:
             pass
             
-        # 盈亏计算
         pnl_str = ""
         closed_pnl = fill.get("closedPnl", "0")
         try:
@@ -281,11 +297,9 @@ def format_fill_message(wallet_label, address, fills):
         except ValueError:
             pass
             
-        # 格式化时间
         fill_time_ms = fill.get("time", 0)
         time_str = datetime.fromtimestamp(fill_time_ms / 1000.0).strftime("%H:%M:%S")
         
-        # 格式化价格，对于微型代币保留更多小数位
         if px < 0.001:
             px_str = f"${px:.8f}"
         elif px < 1:
@@ -302,11 +316,8 @@ def format_fill_message(wallet_label, address, fills):
 
 def main():
     seen_set, last_update_id = load_seen_trades_and_offset()
-    
-    # 1. 优先读取并处理来自 Telegram 的 /add 和 /remove 指令
     new_update_id = process_telegram_commands(last_update_id)
     
-    # 2. 读取最新的钱包地址配置
     config = load_config()
     addresses = config.get("monitored_addresses", [])
     
@@ -335,7 +346,6 @@ def main():
                 continue
             tid_str = str(tid)
             
-            # 如果是首次运行，直接归入已读，不视为新交易
             if first_run:
                 seen_set.add(tid_str)
                 continue
@@ -351,7 +361,6 @@ def main():
                 "fills": new_fills
             }
             
-    # 如果是首次运行，保存初始状态并发送启动成功通知
     if first_run:
         save_seen_trades_and_offset(seen_set, new_update_id)
         startup_msg = (
@@ -363,10 +372,10 @@ def main():
             "• <code>/remove 钱包地址</code>"
         )
         send_tg_notification(startup_msg)
-        print("初始化完成通知已发送至 Telegram。")
+        send_discord_notification(startup_msg)
+        print("初始化完成通知已发送。")
         return
 
-    # 如果有新交易，生成汇总通知（全半小时合并为一条消息）
     if total_new_count > 0:
         print(f"发现 {total_new_count} 笔新交易！正在发送汇总通知...")
         msg_blocks = ["🔔 <b>Hyperliquid 交易汇总提醒</b> (近30分钟)\n"]
@@ -377,15 +386,17 @@ def main():
             
         full_msg = "\n\n".join(msg_blocks)
         
-        # 发送 Telegram 消息
-        success = send_tg_notification(full_msg)
-        if success:
+        # 同时发送 Telegram 和 Discord 推送
+        tg_success = send_tg_notification(full_msg)
+        dc_success = send_discord_notification(full_msg)
+        
+        # 只要任意一个渠道发送成功，就更新已读库，避免在重复运行时重发
+        if tg_success or dc_success:
             save_seen_trades_and_offset(seen_set, new_update_id)
             print("交易汇总提醒推送成功。")
         else:
             print("交易提醒推送失败，未更新已读交易库。")
     else:
-        # 如果没有新交易，但也可能处理了指令，需要更新 last_update_id 并保存
         save_seen_trades_and_offset(seen_set, new_update_id)
         print("未发现新交易。")
 
