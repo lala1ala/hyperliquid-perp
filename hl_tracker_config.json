@@ -35,6 +35,18 @@
     {
       "address": "0xbe19541903f64af97bcf8436f4d15bf3a56b8bd1",
       "label": "Smart HL Perps Trader"
+    },
+    {
+      "address": "0x1bbfb3a33600338d5a948618189649a4588d5fc4",
+      "label": "syncracy"
+    },
+    {
+      "address": "0xb0a55f13d22f66e6d495ac98113841b2326e9540",
+      "label": "接针100%胜率"
+    },
+    {
+      "address": "0xdd14cee0b16ccde99e5fcf4956f7d611ab07d07a",
+      "label": "Fiona"
     }
   ]
 }
