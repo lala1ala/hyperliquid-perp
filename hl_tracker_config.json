@@ -1,8 +1,40 @@
 {
   "monitored_addresses": [
     {
-      "address": "0x23a3da89b4f9d0c86bd71b55fa4fbfc5094fbfc5",
-      "label": "示例聪明钱A"
+      "address": "0x45d26f28196d226497130c4bac709d808fed4029",
+      "label": "diamond hand shorts"
+    },
+    {
+      "address": "0x1c77041452e75939105981a914f138eb9634463c",
+      "label": "high winrate shorts"
+    },
+    {
+      "address": "0x477296b8f5f5525be26e5c0a82eb0dd24da3949f",
+      "label": "Smart HL Perps Trader"
+    },
+    {
+      "address": "0xeeaf4055e581dae6a4eaea0a66181ecb207787f1",
+      "label": "small diamond hand short"
+    },
+    {
+      "address": "0x782e432267376f377585fc78092d998f8442ab83",
+      "label": "macro trader short"
+    },
+    {
+      "address": "0x1ce17ec5fe114457a3867b33c0117c15f04ad56d",
+      "label": "Former Smart Trader"
+    },
+    {
+      "address": "0xdbcc96bcada067864902aad14e029fe7c422f147",
+      "label": "long trend diamond"
+    },
+    {
+      "address": "0x7c976f00e84db0b44f945fc6d7fad34b43150a1a",
+      "label": "HL Perps Altcoin Trader"
+    },
+    {
+      "address": "0xbe19541903f64af97bcf8436f4d15bf3a56b8bd1",
+      "label": "Smart HL Perps Trader"
     }
   ]
 }
