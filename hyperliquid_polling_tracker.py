@@ -377,25 +377,40 @@ def main():
         return
 
     if total_new_count > 0:
-        print(f"发现 {total_new_count} 笔新交易！正在发送汇总通知...")
-        msg_blocks = ["🔔 <b>Hyperliquid 交易汇总提醒</b> (近30分钟)\n"]
-        
-        for addr, data in all_new_fills_by_wallet.items():
-            block_text = format_fill_message(data["label"], addr, data["fills"])
-            msg_blocks.append(block_text)
-            
-        full_msg = "\n\n".join(msg_blocks)
-        
-        # 同时发送 Telegram 和 Discord 推送
-        tg_success = send_tg_notification(full_msg)
-        dc_success = send_discord_notification(full_msg)
-        
-        # 只要任意一个渠道发送成功，就更新已读库，避免在重复运行时重发
-        if tg_success or dc_success:
-            save_seen_trades_and_offset(seen_set, new_update_id)
-            print("交易汇总提醒推送成功。")
+        if total_new_count > 30:
+            print(f"发现大量交易 ({total_new_count} 笔)，判定为新钱包初始化，自动归档并跳过推送。")
+            info_msg = (
+                f"📊 <b>监控列表已更新 / 历史数据归档</b>\n"
+                f"检测到共 <code>{total_new_count}</code> 笔历史交易，已自动归档以防打扰。\n"
+                f"自此之后的交易变动将正常推送。"
+            )
+            tg_success = send_tg_notification(info_msg)
+            dc_success = send_discord_notification(info_msg)
+            if tg_success or dc_success:
+                save_seen_trades_and_offset(seen_set, new_update_id)
+                print("归档状态推送成功。")
+            else:
+                print("归档状态推送失败。")
         else:
-            print("交易提醒推送失败，未更新已读交易库。")
+            print(f"发现 {total_new_count} 笔新交易！正在发送汇总通知...")
+            msg_blocks = ["🔔 <b>Hyperliquid 交易汇总提醒</b> (近30分钟)\n"]
+            
+            for addr, data in all_new_fills_by_wallet.items():
+                block_text = format_fill_message(data["label"], addr, data["fills"])
+                msg_blocks.append(block_text)
+                
+            full_msg = "\n\n".join(msg_blocks)
+            
+            # 同时发送 Telegram 和 Discord 推送
+            tg_success = send_tg_notification(full_msg)
+            dc_success = send_discord_notification(full_msg)
+            
+            # 只要任意一个渠道发送成功，就更新已读库，避免在重复运行时重发
+            if tg_success or dc_success:
+                save_seen_trades_and_offset(seen_set, new_update_id)
+                print("交易汇总提醒推送成功。")
+            else:
+                print("交易提醒推送失败，未更新已读交易库。")
     else:
         print("未发现新交易。正在发送空交易状态推送...")
         status_msg = "ℹ️ <b>无新交易</b> (近30分钟)"
