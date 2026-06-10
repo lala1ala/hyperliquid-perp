@@ -397,8 +397,11 @@ def main():
         else:
             print("交易提醒推送失败，未更新已读交易库。")
     else:
+        print("未发现新交易。正在发送空交易状态推送...")
+        status_msg = "ℹ️ <b>无新交易</b> (近30分钟)"
+        send_tg_notification(status_msg)
+        send_discord_notification(status_msg)
         save_seen_trades_and_offset(seen_set, new_update_id)
-        print("未发现新交易。")
 
 if __name__ == "__main__":
     main()
