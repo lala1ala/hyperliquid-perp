@@ -67,7 +67,7 @@ def load_seen_trades_and_offset():
     return seen_set, last_update_id
 
 def save_seen_trades_and_offset(seen_set, last_update_id):
-    seen_list = list(seen_set)[-3000:]
+    seen_list = sorted(list(seen_set))
     db_data = {
         "seen_tids": seen_list,
         "last_update_id": last_update_id
