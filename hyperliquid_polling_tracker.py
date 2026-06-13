@@ -256,62 +256,152 @@ def format_fill_message(wallet_label, address, fills):
     short_addr = f"{address[:6]}...{address[-4:]}"
     lines.append(f"👤 <b>{wallet_label}</b> (<code>{short_addr}</code>)")
     
+    # Group fills by (coin, direction)
+    groups = {}
+    group_order = []
+    
     sorted_fills = sorted(fills, key=lambda x: x.get("time", 0))
     
     for fill in sorted_fills:
         coin = fill.get("coin", "未知代币")
-        px = float(fill.get("px", 0))
-        sz = float(fill.get("sz", 0))
-        value_usd = px * sz
-        
         side = fill.get("side", "")
         direction = fill.get("dir", "")
-        
         if not direction:
             direction = "买入 (Buy)" if side == "B" else "卖出 (Sell)"
             
-        emoji = "🟢" if "B" in side or "Buy" in direction or "Long" in direction else "🔴"
+        group_key = (coin, direction)
+        if group_key not in groups:
+            groups[group_key] = []
+            group_order.append(group_key)
+        groups[group_key].append(fill)
         
-        pct_str = ""
-        start_pos_str = fill.get("startPosition", "0")
-        try:
-            start_pos = float(start_pos_str)
-            if start_pos == 0:
-                pct_str = " | <b>首笔建仓 (100%)</b>"
-            else:
-                pct = (sz / abs(start_pos)) * 100
-                if pct > 100:
-                    pct_str = f" | <b>仓位占比: {pct:.1f}% (反手/超额)</b>"
+    for group_key in group_order:
+        coin, direction = group_key
+        group_fills = groups[group_key]
+        
+        total_sz = 0.0
+        total_value_usd = 0.0
+        total_pnl = 0.0
+        total_pct = 0.0
+        has_pnl = False
+        has_pct = False
+        first_fill_is_first_build = False
+        
+        # Determine group emoji from first fill
+        first_fill = group_fills[0]
+        first_side = first_fill.get("side", "")
+        group_emoji = "🟢" if "B" in first_side or "Buy" in direction or "Long" in direction else "🔴"
+        
+        for fill in group_fills:
+            px = float(fill.get("px", 0))
+            sz = float(fill.get("sz", 0))
+            total_sz += sz
+            total_value_usd += px * sz
+            
+            closed_pnl = fill.get("closedPnl", "0")
+            try:
+                pnl_val = float(closed_pnl)
+                if pnl_val != 0:
+                    total_pnl += pnl_val
+                    has_pnl = True
+            except ValueError:
+                pass
+                
+            start_pos_str = fill.get("startPosition", "0")
+            try:
+                start_pos = float(start_pos_str)
+                if start_pos == 0:
+                    first_fill_is_first_build = True
+                    has_pct = True
                 else:
-                    pct_str = f" | <b>仓位占比: {pct:.1f}%</b>"
-        except Exception:
-            pass
+                    pct = (sz / abs(start_pos)) * 100
+                    total_pct += pct
+                    has_pct = True
+            except Exception:
+                pass
+                
+        total_pct_str = ""
+        if has_pct:
+            if first_fill_is_first_build:
+                total_pct_str = " | <b>总仓位占比: 首笔建仓</b>"
+            elif total_pct > 0:
+                if total_pct > 100:
+                    total_pct_str = f" | <b>总仓位占比: {total_pct:.1f}% (反手/超额)</b>"
+                else:
+                    total_pct_str = f" | <b>总仓位占比: {total_pct:.1f}%</b>"
+                    
+        total_pnl_str = ""
+        if has_pnl:
+            total_pnl_emoji = "🟢" if total_pnl > 0 else "🔴"
+            total_pnl_str = f" (总盈亏: {total_pnl_emoji}<code>${total_pnl:+.2f}</code>)"
             
-        pnl_str = ""
-        closed_pnl = fill.get("closedPnl", "0")
-        try:
-            pnl_val = float(closed_pnl)
-            if pnl_val != 0:
-                pnl_emoji = "🟢" if pnl_val > 0 else "🔴"
-                pnl_str = f" (盈亏: {pnl_emoji}<code>${pnl_val:+.2f}</code>)"
-        except ValueError:
-            pass
-            
-        fill_time_ms = fill.get("time", 0)
-        time_str = datetime.fromtimestamp(fill_time_ms / 1000.0).strftime("%H:%M:%S")
-        
-        if px < 0.001:
-            px_str = f"${px:.8f}"
-        elif px < 1:
-            px_str = f"${px:.4f}"
+        avg_px = total_value_usd / total_sz if total_sz > 0 else 0.0
+        if avg_px < 0.001:
+            avg_px_str = f"${avg_px:.8f}"
+        elif avg_px < 1:
+            avg_px_str = f"${avg_px:.4f}"
         else:
-            px_str = f"${px:,.2f}"
+            avg_px_str = f"${avg_px:,.2f}"
             
-        lines.append(
-            f"  • {emoji} <b>{direction}</b> | <b>{coin}</b>{pct_str}{pnl_str}\n"
-            f"    均价: {px_str} | 数量: {sz:g} (${value_usd:,.2f} USD)\n"
-            f"    时间: {time_str}"
-        )
+        group_lines = []
+        group_lines.append(f"  🔸 <b>{direction} | {coin} (汇总)</b>{total_pct_str}{total_pnl_str}")
+        group_lines.append(f"    均价: {avg_px_str} | 总数量: {total_sz:g} (${total_value_usd:,.2f} USD)")
+        
+        for fill in group_fills:
+            px = float(fill.get("px", 0))
+            sz = float(fill.get("sz", 0))
+            value_usd = px * sz
+            
+            side = fill.get("side", "")
+            direction = fill.get("dir", "")
+            if not direction:
+                direction = "买入 (Buy)" if side == "B" else "卖出 (Sell)"
+                
+            emoji = "🟢" if "B" in side or "Buy" in direction or "Long" in direction else "🔴"
+            
+            pct_str = ""
+            start_pos_str = fill.get("startPosition", "0")
+            try:
+                start_pos = float(start_pos_str)
+                if start_pos == 0:
+                    pct_str = " | <b>首笔建仓 (100%)</b>"
+                else:
+                    pct = (sz / abs(start_pos)) * 100
+                    if pct > 100:
+                        pct_str = f" | <b>仓位占比: {pct:.1f}% (反手/超额)</b>"
+                    else:
+                        pct_str = f" | <b>仓位占比: {pct:.1f}%</b>"
+            except Exception:
+                pass
+                
+            pnl_str = ""
+            closed_pnl = fill.get("closedPnl", "0")
+            try:
+                pnl_val = float(closed_pnl)
+                if pnl_val != 0:
+                    pnl_emoji = "🟢" if pnl_val > 0 else "🔴"
+                    pnl_str = f" (盈亏: {pnl_emoji}<code>${pnl_val:+.2f}</code>)"
+            except ValueError:
+                pass
+                
+            fill_time_ms = fill.get("time", 0)
+            time_str = datetime.fromtimestamp(fill_time_ms / 1000.0).strftime("%H:%M:%S")
+            
+            if px < 0.001:
+                px_str = f"${px:.8f}"
+            elif px < 1:
+                px_str = f"${px:.4f}"
+            else:
+                px_str = f"${px:,.2f}"
+                
+            group_lines.append(
+                f"    • {emoji} <b>{direction}</b> | <b>{coin}</b>{pct_str}{pnl_str}\n"
+                f"      均价: {px_str} | 数量: {sz:g} (${value_usd:,.2f} USD)\n"
+                f"      时间: {time_str}"
+            )
+            
+        lines.append("\n".join(group_lines))
+        
     return "\n".join(lines)
 
 def main():
