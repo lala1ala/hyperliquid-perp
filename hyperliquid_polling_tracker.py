@@ -50,6 +50,7 @@ def save_config(config_data):
 def load_seen_trades_and_offset():
     seen_set = set()
     last_update_id = 0
+    corrupted = False
     if os.path.exists(DB_FILE):
         try:
             with open(DB_FILE, "r", encoding="utf-8") as f:
@@ -61,20 +62,29 @@ def load_seen_trades_and_offset():
                     seen_set = set(data)
         except Exception as e:
             print(f"Warning: Failed to load seen_trades.json: {e}")
+            corrupted = True
+            try:
+                import shutil
+                shutil.copy(DB_FILE, DB_FILE + f".bak_{int(time.time())}")
+            except:
+                pass
             
-    if not os.path.exists(DB_FILE):
+    if not os.path.exists(DB_FILE) and not corrupted:
         return None, 0
     return seen_set, last_update_id
 
 def save_seen_trades_and_offset(seen_set, last_update_id):
+    import shutil
     seen_list = sorted(list(seen_set))
     db_data = {
         "seen_tids": seen_list,
         "last_update_id": last_update_id
     }
     try:
-        with open(DB_FILE, "w", encoding="utf-8") as f:
+        temp_file = DB_FILE + ".tmp"
+        with open(temp_file, "w", encoding="utf-8") as f:
             json.dump(db_data, f, ensure_ascii=False, indent=2)
+        shutil.move(temp_file, DB_FILE)
     except Exception as e:
         print(f"Error saving seen trades and offset: {e}")
 
@@ -130,7 +140,7 @@ def send_discord_notification(text):
         print(f"Discord send exception: {e}")
         return False
 
-def process_telegram_commands(last_update_id):
+def process_telegram_commands(last_update_id, seen_set):
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id_str = str(os.getenv("TELEGRAM_CHAT_ID", ""))
     
@@ -195,7 +205,19 @@ def process_telegram_commands(last_update_id):
                     send_discord_notification(msg)
                 else:
                     monitored.append({"address": addr, "label": label})
-                    msg = f"✅ <b>添加成功</b>\n已开始监控：<b>{label}</b>\n<code>{addr}</code>"
+                    
+                    fills, err = fetch_user_fills(addr)
+                    history_count = 0
+                    if not err and fills and seen_set is not None:
+                        for f in fills:
+                            tid = f.get("tid")
+                            if tid:
+                                seen_set.add(str(tid))
+                                history_count += 1
+                                
+                    msg = f"✅ <b>添加成功</b>\n已开始监控：<b>{label}</b>\n<code>{addr}</code>\n"
+                    if history_count > 0:
+                        msg += f"<i>(已预先抓取并静默归档 {history_count} 笔历史交易)</i>"
                     send_tg_notification(msg)
                     send_discord_notification(msg)
                 config_changed = True
@@ -233,9 +255,11 @@ def process_telegram_commands(last_update_id):
 
 def fetch_user_fills(address):
     url = "https://api.hyperliquid.xyz/info"
+    import time
     payload = {
-        "type": "userFills",
-        "user": address
+        "type": "userFillsByTime",
+        "user": address,
+        "startTime": int((time.time() - 2 * 60 * 60) * 1000)
     }
     headers = {
         "Content-Type": "application/json"
@@ -243,13 +267,15 @@ def fetch_user_fills(address):
     try:
         resp = requests.post(url, json=payload, headers=headers, timeout=15)
         if resp.status_code == 200:
-            return resp.json()
+            return resp.json(), None
         else:
-            print(f"[{address}] Fetch failed with status {resp.status_code}: {resp.text}")
-            return []
+            err = f"Status {resp.status_code}: {resp.text}"
+            print(f"[{address}] Fetch failed: {err}")
+            return [], err
     except Exception as e:
-        print(f"[{address}] Exception when fetching fills: {e}")
-        return []
+        err = str(e)
+        print(f"[{address}] Exception when fetching fills: {err}")
+        return [], err
 
 def format_fill_message(wallet_label, address, fills):
     lines = []
@@ -345,60 +371,6 @@ def format_fill_message(wallet_label, address, fills):
             
         group_lines = []
         group_lines.append(f"  🔸 <b>{direction} | {coin} (汇总)</b>{total_pct_str}{total_pnl_str}")
-        group_lines.append(f"    均价: {avg_px_str} | 总数量: {total_sz:g} (${total_value_usd:,.2f} USD)")
-        
-        for fill in group_fills:
-            px = float(fill.get("px", 0))
-            sz = float(fill.get("sz", 0))
-            value_usd = px * sz
-            
-            side = fill.get("side", "")
-            direction = fill.get("dir", "")
-            if not direction:
-                direction = "买入 (Buy)" if side == "B" else "卖出 (Sell)"
-                
-            emoji = "🟢" if "B" in side or "Buy" in direction or "Long" in direction else "🔴"
-            
-            pct_str = ""
-            start_pos_str = fill.get("startPosition", "0")
-            try:
-                start_pos = float(start_pos_str)
-                if start_pos == 0:
-                    pct_str = " | <b>首笔建仓 (100%)</b>"
-                else:
-                    pct = (sz / abs(start_pos)) * 100
-                    if pct > 100:
-                        pct_str = f" | <b>仓位占比: {pct:.1f}% (反手/超额)</b>"
-                    else:
-                        pct_str = f" | <b>仓位占比: {pct:.1f}%</b>"
-            except Exception:
-                pass
-                
-            pnl_str = ""
-            closed_pnl = fill.get("closedPnl", "0")
-            try:
-                pnl_val = float(closed_pnl)
-                if pnl_val != 0:
-                    pnl_emoji = "🟢" if pnl_val > 0 else "🔴"
-                    pnl_str = f" (盈亏: {pnl_emoji}<code>${pnl_val:+.2f}</code>)"
-            except ValueError:
-                pass
-                
-            fill_time_ms = fill.get("time", 0)
-            time_str = datetime.fromtimestamp(fill_time_ms / 1000.0).strftime("%H:%M:%S")
-            
-            if px < 0.001:
-                px_str = f"${px:.8f}"
-            elif px < 1:
-                px_str = f"${px:.4f}"
-            else:
-                px_str = f"${px:,.2f}"
-                
-            group_lines.append(
-                f"    • {emoji} <b>{direction}</b> | <b>{coin}</b>{pct_str}{pnl_str}\n"
-                f"      均价: {px_str} | 数量: {sz:g} (${value_usd:,.2f} USD)\n"
-                f"      时间: {time_str}"
-            )
             
         lines.append("\n".join(group_lines))
         
@@ -406,7 +378,7 @@ def format_fill_message(wallet_label, address, fills):
 
 def main():
     seen_set, last_update_id = load_seen_trades_and_offset()
-    new_update_id = process_telegram_commands(last_update_id)
+    new_update_id = process_telegram_commands(last_update_id, seen_set)
     
     config = load_config()
     addresses = config.get("monitored_addresses", [])
@@ -419,6 +391,7 @@ def main():
         
     all_new_fills_by_wallet = {}
     total_new_count = 0
+    errors = []
     
     for wallet in addresses:
         addr = wallet.get("address", "").lower().strip()
@@ -427,8 +400,11 @@ def main():
             continue
             
         print(f"正在获取 [{label}] ({addr}) 的成交历史...")
-        fills = fetch_user_fills(addr)
-        
+        fills, err = fetch_user_fills(addr)
+        if err:
+            errors.append(f"[{label}] API 错误: {err}")
+            continue
+            
         new_fills = []
         for fill in fills:
             tid = fill.get("tid")
@@ -466,17 +442,33 @@ def main():
         print("初始化完成通知已发送。")
         return
 
+    def send_long_msg(text):
+        MAX_LEN = 3800
+        success = False
+        while len(text) > MAX_LEN:
+            idx = text.rfind('\n\n', 0, MAX_LEN)
+            if idx == -1: idx = MAX_LEN
+            chunk = text[:idx]
+            text = text[idx:].lstrip()
+            tg_s = send_tg_notification(chunk)
+            dc_s = send_discord_notification(chunk)
+            if tg_s or dc_s: success = True
+        if text:
+            tg_s = send_tg_notification(text)
+            dc_s = send_discord_notification(text)
+            if tg_s or dc_s: success = True
+        return success
+
     if total_new_count > 0:
-        if total_new_count > 30:
+        if total_new_count > 1000:
             print(f"发现大量交易 ({total_new_count} 笔)，判定为新钱包初始化，自动归档并跳过推送。")
             info_msg = (
                 f"📊 <b>监控列表已更新 / 历史数据归档</b>\n"
                 f"检测到共 <code>{total_new_count}</code> 笔历史交易，已自动归档以防打扰。\n"
                 f"自此之后的交易变动将正常推送。"
             )
-            tg_success = send_tg_notification(info_msg)
-            dc_success = send_discord_notification(info_msg)
-            if tg_success or dc_success:
+            success = send_long_msg(info_msg)
+            if success:
                 save_seen_trades_and_offset(seen_set, new_update_id)
                 print("归档状态推送成功。")
             else:
@@ -486,17 +478,19 @@ def main():
             msg_blocks = ["🔔 <b>Hyperliquid 交易汇总提醒</b> (近30分钟)\n"]
             
             for addr, data in all_new_fills_by_wallet.items():
-                block_text = format_fill_message(data["label"], addr, data["fills"])
-                msg_blocks.append(block_text)
+                try:
+                    block_text = format_fill_message(data["label"], addr, data["fills"])
+                    msg_blocks.append(block_text)
+                except Exception as e:
+                    errors.append(f"[{data['label']}] 格式化错误: {e}")
                 
             full_msg = "\n\n".join(msg_blocks)
+            if errors:
+                full_msg += "\n\n⚠️ <b>获取警告</b>\n" + "\n".join(errors)
             
-            # 同时发送 Telegram 和 Discord 推送
-            tg_success = send_tg_notification(full_msg)
-            dc_success = send_discord_notification(full_msg)
+            success = send_long_msg(full_msg)
             
-            # 只要任意一个渠道发送成功，就更新已读库，避免在重复运行时重发
-            if tg_success or dc_success:
+            if success:
                 save_seen_trades_and_offset(seen_set, new_update_id)
                 print("交易汇总提醒推送成功。")
             else:
@@ -504,8 +498,10 @@ def main():
     else:
         print("未发现新交易。正在发送空交易状态推送...")
         status_msg = "ℹ️ <b>无新交易</b> (近30分钟)"
-        send_tg_notification(status_msg)
-        send_discord_notification(status_msg)
+        if errors:
+            status_msg += "\n\n⚠️ <b>获取警告</b>\n" + "\n".join(errors)
+            
+        send_long_msg(status_msg)
         save_seen_trades_and_offset(seen_set, new_update_id)
 
 if __name__ == "__main__":
