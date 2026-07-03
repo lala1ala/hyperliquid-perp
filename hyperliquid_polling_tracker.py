@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import json
 import requests
 from datetime import datetime
@@ -34,7 +35,10 @@ def load_config():
         return {"monitored_addresses": []}
     try:
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            if isinstance(data, dict):
+                return data
+            return {"monitored_addresses": []}
     except Exception as e:
         print(f"Error loading config: {e}")
         return {"monitored_addresses": []}
@@ -122,8 +126,7 @@ def send_tg_notification(text):
 def send_discord_notification(text):
     webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
     if not webhook_url:
-        # 如果没有配置 Discord Webhook，则静默跳过
-        return True
+        return False
         
     discord_text = html_to_discord_markdown(text)
     payload = {
@@ -267,7 +270,13 @@ def fetch_user_fills(address):
     try:
         resp = requests.post(url, json=payload, headers=headers, timeout=15)
         if resp.status_code == 200:
-            return resp.json(), None
+            data = resp.json()
+            if isinstance(data, list):
+                return data, None
+            else:
+                err = f"API Error Payload: {data}"
+                print(f"[{address}] Fetch failed: {err}")
+                return [], err
         else:
             err = f"Status {resp.status_code}: {resp.text}"
             print(f"[{address}] Fetch failed: {err}")
@@ -319,8 +328,13 @@ def format_fill_message(wallet_label, address, fills):
         group_emoji = "🟢" if "B" in first_side or "Buy" in direction or "Long" in direction else "🔴"
         
         for fill in group_fills:
-            px = float(fill.get("px", 0))
-            sz = float(fill.get("sz", 0))
+            try:
+                px = float(fill.get("px", 0) or 0)
+                sz = float(fill.get("sz", 0) or 0)
+            except (ValueError, TypeError):
+                px = 0.0
+                sz = 0.0
+            
             total_sz += sz
             total_value_usd += px * sz
             
@@ -444,21 +458,37 @@ def main():
         return
 
     def send_long_msg(text):
+        has_tg = bool(os.getenv("TELEGRAM_BOT_TOKEN") and os.getenv("TELEGRAM_CHAT_ID"))
+        has_dc = bool(os.getenv("DISCORD_WEBHOOK_URL"))
+        
+        if not has_tg and not has_dc:
+            print("Warning: Neither Telegram nor Discord is configured.")
+            return False
+
         MAX_LEN = 3800
-        success = False
+        all_success = True
+        
+        chunks = []
         while len(text) > MAX_LEN:
             idx = text.rfind('\n\n', 0, MAX_LEN)
             if idx == -1: idx = MAX_LEN
-            chunk = text[:idx]
+            chunks.append(text[:idx])
             text = text[idx:].lstrip()
-            tg_s = send_tg_notification(chunk)
-            dc_s = send_discord_notification(chunk)
-            if tg_s or dc_s: success = True
         if text:
-            tg_s = send_tg_notification(text)
-            dc_s = send_discord_notification(text)
-            if tg_s or dc_s: success = True
-        return success
+            chunks.append(text)
+            
+        for chunk in chunks:
+            chunk_ok = True
+            if has_tg:
+                if not send_tg_notification(chunk):
+                    chunk_ok = False
+            if has_dc:
+                if not send_discord_notification(chunk):
+                    chunk_ok = False
+            if not chunk_ok:
+                all_success = False
+                
+        return all_success
 
     if total_new_count > 0:
         if total_new_count > 1000:
