@@ -371,6 +371,7 @@ def format_fill_message(wallet_label, address, fills):
             
         group_lines = []
         group_lines.append(f"  🔸 <b>{direction} | {coin} (汇总)</b>{total_pct_str}{total_pnl_str}")
+        group_lines.append(f"    总量: <code>{total_sz:g}</code> | 均价: <code>{avg_px_str}</code> | 总额: <code>${total_value_usd:,.2f}</code>")
             
         lines.append("\n".join(group_lines))
         
