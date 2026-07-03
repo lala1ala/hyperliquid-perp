@@ -465,7 +465,9 @@ def main():
             print("Warning: Neither Telegram nor Discord is configured.")
             return False
 
-        MAX_LEN = 3800
+        # Discord content limit is 2000, Telegram is 4096. 
+        # Using 1900 to be safe for both platforms and prevent Discord from throwing 400 Bad Request.
+        MAX_LEN = 1900
         all_success = True
         
         chunks = []
@@ -487,6 +489,9 @@ def main():
                     chunk_ok = False
             if not chunk_ok:
                 all_success = False
+            
+            # Sleep slightly to prevent hitting Discord/Telegram rate limits on multiple chunks
+            time.sleep(0.5)
                 
         return all_success
 
