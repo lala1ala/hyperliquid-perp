@@ -324,7 +324,7 @@ def format_fill_message(wallet_label, address, fills):
         
         # Determine group emoji from first fill
         first_fill = group_fills[0]
-        first_side = first_fill.get("side", "")
+        first_side = str(first_fill.get("side") or "")
         group_emoji = "🟢" if "B" in first_side or "Buy" in direction or "Long" in direction else "🔴"
         
         for fill in group_fills:
@@ -340,16 +340,16 @@ def format_fill_message(wallet_label, address, fills):
             
             closed_pnl = fill.get("closedPnl", "0")
             try:
-                pnl_val = float(closed_pnl)
+                pnl_val = float(closed_pnl if closed_pnl is not None else 0)
                 if pnl_val != 0:
                     total_pnl += pnl_val
                     has_pnl = True
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
                 
             start_pos_str = fill.get("startPosition", "0")
             try:
-                start_pos = float(start_pos_str)
+                start_pos = float(start_pos_str if start_pos_str is not None else 0)
                 if start_pos == 0:
                     first_fill_is_first_build = True
                     has_pct = True
@@ -357,7 +357,7 @@ def format_fill_message(wallet_label, address, fills):
                     pct = (sz / abs(start_pos)) * 100
                     total_pct += pct
                     has_pct = True
-            except Exception:
+            except (ValueError, TypeError):
                 pass
                 
         total_pct_str = ""
