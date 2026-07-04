@@ -51,6 +51,10 @@
     {
       "address": "0xfdf891f2b214a4c9374d26595ec6d4080262e381",
       "label": "AERO SM holder"
+    },
+    {
+      "address": "0x77fee2df7bad4f1db93052fa82bf78eaab771a16",
+      "label": "Realist Capital"
     }
   ]
 }
