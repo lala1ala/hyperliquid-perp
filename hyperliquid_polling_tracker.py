@@ -265,7 +265,8 @@ def fetch_user_fills(address):
         "startTime": int((time.time() - 2 * 60 * 60) * 1000)
     }
     headers = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
     try:
         resp = requests.post(url, json=payload, headers=headers, timeout=15)
