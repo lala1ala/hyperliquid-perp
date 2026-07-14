@@ -268,24 +268,31 @@ def fetch_user_fills(address):
         "Content-Type": "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
-    try:
-        resp = requests.post(url, json=payload, headers=headers, timeout=15)
-        if resp.status_code == 200:
-            data = resp.json()
-            if isinstance(data, list):
-                return data, None
+    
+    max_retries = 3
+    last_err = ""
+    
+    for attempt in range(max_retries):
+        try:
+            resp = requests.post(url, json=payload, headers=headers, timeout=15)
+            if resp.status_code == 200:
+                data = resp.json()
+                if isinstance(data, list):
+                    return data, None
+                else:
+                    err = f"API Error Payload: {data}"
+                    print(f"[{address}] Fetch failed: {err}")
+                    return [], err
             else:
-                err = f"API Error Payload: {data}"
-                print(f"[{address}] Fetch failed: {err}")
-                return [], err
-        else:
-            err = f"Status {resp.status_code}: {resp.text}"
-            print(f"[{address}] Fetch failed: {err}")
-            return [], err
-    except Exception as e:
-        err = str(e)
-        print(f"[{address}] Exception when fetching fills: {err}")
-        return [], err
+                last_err = f"Status {resp.status_code}: {resp.text}"
+                print(f"[{address}] Fetch failed attempt {attempt+1}: {last_err}")
+                time.sleep(2)
+        except Exception as e:
+            last_err = str(e)
+            print(f"[{address}] Exception when fetching fills attempt {attempt+1}: {last_err}")
+            time.sleep(2)
+            
+    return [], f"Failed after {max_retries} attempts. Last error: {last_err}"
 
 def format_fill_message(wallet_label, address, fills):
     lines = []
