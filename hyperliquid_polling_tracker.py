@@ -118,7 +118,18 @@ def send_tg_notification(text):
     }
     try:
         resp = requests.post(url, json=data, timeout=15)
-        return resp.status_code == 200
+        # NOTE: Telegram API ALWAYS returns HTTP 200 even on failure (wrong token,
+        # bot kicked, invalid chat_id, etc.). The real success indicator is
+        # resp.json()["ok"]. Checking only status_code == 200 is a critical bug
+        # that causes missed alerts to be silently marked as "sent" in the DB.
+        result = resp.json()
+        if result.get("ok"):
+            return True
+        else:
+            err_code = result.get("error_code", "?")
+            err_desc = result.get("description", "unknown error")
+            print(f"Telegram API error {err_code}: {err_desc}")
+            return False
     except Exception as e:
         print(f"Telegram send exception: {e}")
         return False
