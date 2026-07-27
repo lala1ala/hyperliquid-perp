@@ -298,7 +298,7 @@ def fetch_user_fills(address):
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
     
-    max_retries = 2
+    max_retries = 3
     last_err = ""
     
     for attempt in range(max_retries):
@@ -315,11 +315,11 @@ def fetch_user_fills(address):
             else:
                 last_err = f"Status {resp.status_code}: {resp.text}"
                 print(f"[{address}] Fetch failed attempt {attempt+1}: {last_err}")
-                time.sleep(1)
+                time.sleep(2)
         except Exception as e:
             last_err = str(e)
             print(f"[{address}] Exception when fetching fills attempt {attempt+1}: {last_err}")
-            time.sleep(1)
+            time.sleep(2)
             
     return [], f"Failed after {max_retries} attempts. Last error: {last_err}"
 
