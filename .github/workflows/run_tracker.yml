@@ -2,8 +2,8 @@ name: Hyperliquid Wallet Tracker
 
 on:
   schedule:
-    # 每小时的第 18 和 48 分钟运行一次 (UTC时间)，避开整点/半点拥堵高峰。
-    - cron: '18,48 * * * *'
+    # 每小时第 18 分钟运行一次 (UTC)，每月预算 ~720 分钟，远低于 2000 免费额度
+    - cron: '18 * * * *'
   workflow_dispatch:
     # 允许在 GitHub Web UI 中手动触发执行
 

@@ -4,6 +4,7 @@ import time
 import json
 import requests
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # 强制 stdout 使用 UTF-8 编码
 if hasattr(sys.stdout, "reconfigure"):
@@ -77,8 +78,25 @@ def load_seen_trades_and_offset():
         return None, 0
     return seen_set, last_update_id
 
+def prune_old_tids(seen_set, max_keep=100000):
+    """
+    防止 seen_trades.json 无限膨胀。
+    Hyperliquid 的 tid 是递增的，值越大表示交易越新。
+    我们只保留最新的 max_keep 个 tid，旧的永远不会再出现在 API 中
+    （因为 API 只返回最近 2 小时的成交记录）。
+    """
+    if len(seen_set) <= max_keep:
+        return seen_set
+    # tid 是数字字符串，按数值排序，保留最大的（最新的）
+    sorted_tids = sorted(seen_set, key=lambda x: int(x))
+    pruned = set(sorted_tids[-max_keep:])
+    print(f"Pruned {len(seen_set) - len(pruned)} old tids (kept {len(pruned)} newest)")
+    return pruned
+
 def save_seen_trades_and_offset(seen_set, last_update_id):
     import shutil
+    # 定期清理旧 tid，防止文件无限膨胀
+    seen_set = prune_old_tids(seen_set)
     seen_list = sorted(list(seen_set))
     db_data = {
         "seen_tids": seen_list,
@@ -280,7 +298,7 @@ def fetch_user_fills(address):
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
     
-    max_retries = 3
+    max_retries = 2
     last_err = ""
     
     for attempt in range(max_retries):
@@ -297,11 +315,11 @@ def fetch_user_fills(address):
             else:
                 last_err = f"Status {resp.status_code}: {resp.text}"
                 print(f"[{address}] Fetch failed attempt {attempt+1}: {last_err}")
-                time.sleep(2)
+                time.sleep(1)
         except Exception as e:
             last_err = str(e)
             print(f"[{address}] Exception when fetching fills attempt {attempt+1}: {last_err}")
-            time.sleep(2)
+            time.sleep(1)
             
     return [], f"Failed after {max_retries} attempts. Last error: {last_err}"
 
@@ -411,6 +429,31 @@ def format_fill_message(wallet_label, address, fills):
     return "\n".join(lines)
 
 def main():
+    # 全局超时保护：如果脚本运行超过 20 分钟则强制退出
+    # GitHub Actions 默认超时 6 小时，但我们不应该让脚本挂起那么久
+    import signal
+
+    def timeout_handler(signum, frame):
+        print("FATAL: Script timed out after 20 minutes. Exiting with error.")
+        sys.exit(1)
+
+    # 仅在非 Windows 系统上设置 signal alarm（GitHub Actions 使用 Linux）
+    if hasattr(signal, 'SIGALRM'):
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(1200)  # 20 分钟
+
+    try:
+        _main_impl()
+    except Exception as e:
+        print(f"FATAL: Unhandled exception in main: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+    finally:
+        if hasattr(signal, 'SIGALRM'):
+            signal.alarm(0)  # 取消超时
+
+def _main_impl():
     seen_set, last_update_id = load_seen_trades_and_offset()
     new_update_id = process_telegram_commands(last_update_id, seen_set)
     
@@ -426,41 +469,54 @@ def main():
     all_new_fills_by_wallet = {}
     total_new_count = 0
     errors = []
-    
-    for wallet in addresses:
+
+    # 使用线程池并发获取所有钱包的成交历史，大幅减少运行时间
+    # 原来是 14 个地址串行 = ~70 秒，并发后 = ~10 秒
+    def fetch_single_wallet(wallet):
         addr = wallet.get("address", "").lower().strip()
         label = wallet.get("label", "未命名")
         if not addr:
-            continue
-            
+            return None
         print(f"正在获取 [{label}] ({addr}) 的成交历史...")
         fills, err = fetch_user_fills(addr)
-        if err:
-            errors.append(f"[{label}] API 错误: {err}")
-            continue
-            
-        new_fills = []
-        for fill in fills:
-            tid = fill.get("tid")
-            if not tid:
+        return {"addr": addr, "label": label, "fills": fills, "err": err}
+
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {executor.submit(fetch_single_wallet, w): w for w in addresses}
+        for future in as_completed(futures):
+            result = future.result()
+            if result is None:
                 continue
-            tid_str = str(tid)
-            
-            if first_run:
-                seen_set.add(tid_str)
+            addr = result["addr"]
+            label = result["label"]
+            fills = result["fills"]
+            err = result["err"]
+
+            if err:
+                errors.append(f"[{label}] API 错误: {err}")
                 continue
-                
-            if tid_str not in seen_set:
-                new_fills.append(fill)
-                seen_set.add(tid_str)
-                total_new_count += 1
-                
-        if new_fills:
-            all_new_fills_by_wallet[addr] = {
-                "label": label,
-                "fills": new_fills
-            }
-            
+
+            new_fills = []
+            for fill in fills:
+                tid = fill.get("tid")
+                if not tid:
+                    continue
+                tid_str = str(tid)
+
+                if first_run:
+                    seen_set.add(tid_str)
+                    continue
+
+                if tid_str not in seen_set:
+                    new_fills.append(fill)
+                    seen_set.add(tid_str)
+                    total_new_count += 1
+
+            if new_fills:
+                all_new_fills_by_wallet[addr] = {
+                    "label": label,
+                    "fills": new_fills
+                }
     if first_run:
         save_seen_trades_and_offset(seen_set, new_update_id)
         startup_msg = (
