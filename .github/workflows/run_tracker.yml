@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      # 允许工作流向仓库提交/推送文件 (用于保存 seen_trades.json)
+      # 允许工作流向仓库提交/推送文件 (seen_trades.json + hl_tracker_config.json)
       contents: write
 
     steps:
@@ -38,15 +38,14 @@ jobs:
         DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       run: python hyperliquid_polling_tracker.py
 
-    - name: Commit and Push Seen Trades History
+    - name: Commit and Push Data Files
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git add seen_trades.json || true
-        # 仅当 seen_trades.json 文件发生实际改变时才进行提交与推送
+        git add seen_trades.json hl_tracker_config.json || true
         if git diff --staged --quiet; then
-          echo "No changes in seen_trades.json. Skipping commit."
+          echo "No data changes. Skipping commit."
         else
-          git commit -m "chore: auto-update seen_trades.json history [skip ci]"
+          git commit -m "chore: auto-update tracking data [skip ci]"
           git push
         fi

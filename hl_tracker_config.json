@@ -55,6 +55,30 @@
     {
       "address": "0x77fee2df7bad4f1db93052fa82bf78eaab771a16",
       "label": "Realist Capital"
+    },
+    {
+      "address": "0xdd9f274410c8c704bdbb599dce6c4fb34be4f50a",
+      "label": "Low-frequency"
+    },
+    {
+      "address": "0xfeec88b13fc0be31695069f02bac18538a154e9c",
+      "label": "consistent win"
+    },
+    {
+      "address": "0xc59498175d6d317642aeb97f895a7ce1aa992191",
+      "label": "ZEC ONLY"
+    },
+    {
+      "address": "0xf21d494bb47339f399267c5519cbe11da0753b2d",
+      "label": "50-50 long"
+    },
+    {
+      "address": "0x031f72deb03c509af42624ddcd1f63fce5ecb220",
+      "label": "high win-rate"
+    },
+    {
+      "address": "0x404ca2035b37bf2e83505134ebcf8d03babb5f03",
+      "label": "diamond short large draw-down"
     }
   ]
 }
