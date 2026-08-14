@@ -55,6 +55,7 @@ def save_config(config_data):
 def load_seen_trades_and_offset():
     seen_set = set()
     last_update_id = 0
+    position_state = {}
     corrupted = False
     if os.path.exists(DB_FILE):
         try:
@@ -63,6 +64,9 @@ def load_seen_trades_and_offset():
                 if isinstance(data, dict):
                     seen_set = set(data.get("seen_tids", []))
                     last_update_id = data.get("last_update_id", 0)
+                    ps = data.get("position_state", {})
+                    if isinstance(ps, dict):
+                        position_state = ps
                 elif isinstance(data, list):
                     seen_set = set(data)
         except Exception as e:
@@ -73,10 +77,10 @@ def load_seen_trades_and_offset():
                 shutil.copy(DB_FILE, DB_FILE + f".bak_{int(time.time())}")
             except:
                 pass
-            
+
     if not os.path.exists(DB_FILE) and not corrupted:
-        return None, 0
-    return seen_set, last_update_id
+        return None, 0, {}
+    return seen_set, last_update_id, position_state
 
 def prune_old_tids(seen_set, max_keep=100000):
     """
@@ -93,7 +97,7 @@ def prune_old_tids(seen_set, max_keep=100000):
     print(f"Pruned {len(seen_set) - len(pruned)} old tids (kept {len(pruned)} newest)")
     return pruned
 
-def save_seen_trades_and_offset(seen_set, last_update_id):
+def save_seen_trades_and_offset(seen_set, last_update_id, position_state=None):
     import shutil
     # 定期清理旧 tid，防止文件无限膨胀
     seen_set = prune_old_tids(seen_set)
@@ -102,6 +106,8 @@ def save_seen_trades_and_offset(seen_set, last_update_id):
         "seen_tids": seen_list,
         "last_update_id": last_update_id
     }
+    if position_state is not None:
+        db_data["position_state"] = position_state
     try:
         temp_file = DB_FILE + ".tmp"
         with open(temp_file, "w", encoding="utf-8") as f:
@@ -285,43 +291,162 @@ def process_telegram_commands(last_update_id, seen_set):
         print(f"Error processing Telegram commands: {e}")
         return last_update_id
 
-def fetch_user_fills(address):
+def fetch_user_fills(address, lookback_seconds=2 * 60 * 60):
+    """
+    分页拉取指定地址最近 lookback_seconds 内的全部成交。
+
+    Hyperliquid 的 userFillsByTime 接口单次最多返回 2000 笔且按时间升序，
+    若一个钱包在窗口内成交超过 2000 笔，直接单次调用会漏掉最新（最关键）的
+    那批成交。这里通过不断前移 startTime 游标分页拉取，保证巨量平仓也不会漏。
+    返回 (成交列表[按时间倒序], 错误信息)。
+    """
     url = "https://api.hyperliquid.xyz/info"
-    import time
-    payload = {
-        "type": "userFillsByTime",
-        "user": address,
-        "startTime": int((time.time() - 2 * 60 * 60) * 1000)
-    }
+    start_time_ms = int((time.time() - lookback_seconds) * 1000)
     headers = {
         "Content-Type": "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
-    
-    max_retries = 3
-    last_err = ""
-    
-    for attempt in range(max_retries):
-        try:
-            resp = requests.post(url, json=payload, headers=headers, timeout=15)
-            if resp.status_code == 200:
-                data = resp.json()
-                if isinstance(data, list):
-                    return data, None
+
+    all_fills = []
+    local_seen = set()
+    cursor_start = start_time_ms
+    max_pages = 50  # 安全上限：50 * 2000 = 10 万笔，足够覆盖任何极端情况
+
+    for _ in range(max_pages):
+        payload = {
+            "type": "userFillsByTime",
+            "user": address,
+            "startTime": cursor_start
+        }
+
+        data = None
+        last_err = ""
+        for attempt in range(3):
+            try:
+                resp = requests.post(url, json=payload, headers=headers, timeout=15)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if not isinstance(data, list):
+                        err = f"API Error Payload: {data}"
+                        print(f"[{address}] Fetch failed: {err}")
+                        return [], err
+                    break
                 else:
-                    err = f"API Error Payload: {data}"
-                    print(f"[{address}] Fetch failed: {err}")
-                    return [], err
-            else:
-                last_err = f"Status {resp.status_code}: {resp.text}"
-                print(f"[{address}] Fetch failed attempt {attempt+1}: {last_err}")
+                    last_err = f"Status {resp.status_code}: {resp.text}"
+                    print(f"[{address}] Fetch failed attempt {attempt+1}: {last_err}")
+                    time.sleep(2)
+            except Exception as e:
+                last_err = str(e)
+                print(f"[{address}] Exception when fetching fills attempt {attempt+1}: {last_err}")
                 time.sleep(2)
-        except Exception as e:
-            last_err = str(e)
-            print(f"[{address}] Exception when fetching fills attempt {attempt+1}: {last_err}")
-            time.sleep(2)
-            
-    return [], f"Failed after {max_retries} attempts. Last error: {last_err}"
+
+        if data is None:
+            return [], f"Failed after 3 attempts. Last error: {last_err}"
+
+        if not data:
+            break
+
+        for fill in data:
+            tid = str(fill.get("tid", ""))
+            if not tid:
+                continue
+            if tid not in local_seen:
+                local_seen.add(tid)
+                all_fills.append(fill)
+
+        # 不足 2000 说明已经拉到窗口内全部成交
+        if len(data) < 2000:
+            break
+
+        # 游标前移；用最后一条成交时间（含重叠，靠 tid 去重），确保不漏同毫秒边界
+        last_time = data[-1].get("time", 0)
+        if last_time <= cursor_start:
+            cursor_start = last_time + 1
+        else:
+            cursor_start = last_time
+
+    # 按时间倒序返回，方便后续优先看到最新成交
+    all_fills.sort(key=lambda x: x.get("time", 0), reverse=True)
+    return all_fills, None
+
+def fetch_position_state(address):
+    """获取地址当前持仓快照，用于检测「全部平仓/大幅减仓」等关键事件。"""
+    url = "https://api.hyperliquid.xyz/info"
+    payload = {"type": "clearinghouseState", "user": address}
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    try:
+        resp = requests.post(url, json=payload, headers=headers, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return None, str(e)
+
+    position_count = 0
+    total_notional = 0.0
+    for pos in data.get("assetPositions", []):
+        if pos.get("type") != "oneWay":
+            continue
+        p = pos.get("position", {})
+        try:
+            szi = float(p.get("szi", 0) or 0)
+        except (ValueError, TypeError):
+            szi = 0.0
+        if abs(szi) < 1e-9:
+            continue
+        position_count += 1
+        try:
+            total_notional += abs(float(p.get("positionValue", 0) or 0))
+        except (ValueError, TypeError):
+            pass
+
+    margin_summary = data.get("marginSummary", {})
+    try:
+        account_value = float(margin_summary.get("accountValue", 0) or 0)
+    except (ValueError, TypeError):
+        account_value = 0.0
+
+    return {
+        "position_count": position_count,
+        "total_notional": total_notional,
+        "account_value": account_value,
+    }, None
+
+def format_position_change_alert(address, label, prev, curr):
+    """对比前后两次持仓快照，生成关键仓位异动提醒。"""
+    prev_count = int(prev.get("position_count", 0) or 0)
+    curr_count = int(curr.get("position_count", 0) or 0)
+    prev_av = float(prev.get("account_value", 0) or 0)
+    curr_av = float(curr.get("account_value", 0) or 0)
+    prev_notional = float(prev.get("total_notional", 0) or 0)
+    short = f"{address[:6]}...{address[-4:]}"
+
+    # 只有之前确实持有仓位时才报警，避免首轮/空仓地址产生噪音
+    if prev_count <= 0:
+        return None
+
+    all_closed = curr_count == 0
+    big_reduce = (not all_closed) and curr_count < prev_count * 0.5
+    funds_cleared = prev_av > 0 and curr_av <= 1e-9
+
+    if not (all_closed or big_reduce or funds_cleared):
+        return None
+
+    if all_closed or funds_cleared:
+        emoji, title = "🚨", "全部平仓 / 资金清空"
+    else:
+        emoji, title = "⚠️", "大幅减仓"
+
+    lines = [f"{emoji} <b>【{title}】{label}</b> (<code>{short}</code>)"]
+    lines.append(f"   持仓数量: <code>{prev_count}</code> → <code>{curr_count}</code>")
+    if prev_notional > 0:
+        lines.append(f"   平仓前名义价值: <code>${prev_notional:,.2f}</code>")
+    if prev_av > 0 or curr_av > 0:
+        lines.append(f"   账户价值: <code>${prev_av:,.2f}</code> → <code>${curr_av:,.2f}</code>")
+
+    return "\n".join(lines)
 
 def format_fill_message(wallet_label, address, fills):
     lines = []
@@ -454,32 +579,37 @@ def main():
             signal.alarm(0)  # 取消超时
 
 def _main_impl():
-    seen_set, last_update_id = load_seen_trades_and_offset()
+    seen_set, last_update_id, position_state = load_seen_trades_and_offset()
     new_update_id = process_telegram_commands(last_update_id, seen_set)
-    
+
     config = load_config()
     addresses = config.get("monitored_addresses", [])
-    
+
     first_run = (seen_set is None)
-    
+
     if first_run:
         print("首次运行检测：正在初始化已读交易库，本次不会发送具体交易提醒以防打扰。")
         seen_set = set()
-        
+
+    position_state = position_state or {}
+    updated_position_state = dict(position_state)
+
     all_new_fills_by_wallet = {}
+    position_alerts = []
     total_new_count = 0
     errors = []
 
-    # 使用线程池并发获取所有钱包的成交历史，大幅减少运行时间
-    # 原来是 14 个地址串行 = ~70 秒，并发后 = ~10 秒
+    # 使用线程池并发获取所有钱包的成交历史 + 持仓快照，大幅减少运行时间
     def fetch_single_wallet(wallet):
         addr = wallet.get("address", "").lower().strip()
         label = wallet.get("label", "未命名")
         if not addr:
             return None
         print(f"正在获取 [{label}] ({addr}) 的成交历史...")
-        fills, err = fetch_user_fills(addr)
-        return {"addr": addr, "label": label, "fills": fills, "err": err}
+        fills, ferr = fetch_user_fills(addr)
+        pstate, perr = fetch_position_state(addr)
+        return {"addr": addr, "label": label, "fills": fills, "err": ferr,
+                "pstate": pstate, "perr": perr}
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = {executor.submit(fetch_single_wallet, w): w for w in addresses}
@@ -491,7 +621,22 @@ def _main_impl():
             label = result["label"]
             fills = result["fills"]
             err = result["err"]
+            pstate = result["pstate"]
+            perr = result["perr"]
 
+            # 1) 持仓异动检测（不依赖成交笔数，专门兜底巨量平仓）
+            if perr:
+                errors.append(f"[{label}] 持仓快照错误: {perr}")
+            elif pstate is not None:
+                updated_position_state[addr] = pstate
+                if not first_run:
+                    prev = position_state.get(addr)
+                    if prev:
+                        alert = format_position_change_alert(addr, label, prev, pstate)
+                        if alert:
+                            position_alerts.append(alert)
+
+            # 2) 成交检测
             if err:
                 errors.append(f"[{label}] API 错误: {err}")
                 continue
@@ -518,7 +663,7 @@ def _main_impl():
                     "fills": new_fills
                 }
     if first_run:
-        save_seen_trades_and_offset(seen_set, new_update_id)
+        save_seen_trades_and_offset(seen_set, new_update_id, updated_position_state)
         startup_msg = (
             "🤖 <b>Hyperliquid 监控机器人初始化成功！</b>\n\n"
             "系统已将当前历史交易归档，从现在起将实时监听最新仓位变动。\n"
@@ -570,50 +715,44 @@ def _main_impl():
                 
         return all_success
 
-    if total_new_count > 0:
-        if total_new_count > 1000:
-            print(f"发现大量交易 ({total_new_count} 笔)，判定为新钱包初始化，自动归档并跳过推送。")
-            info_msg = (
-                f"📊 <b>监控列表已更新 / 历史数据归档</b>\n"
-                f"检测到共 <code>{total_new_count}</code> 笔历史交易，已自动归档以防打扰。\n"
-                f"自此之后的交易变动将正常推送。"
-            )
-            success = send_long_msg(info_msg)
-            if success:
-                save_seen_trades_and_offset(seen_set, new_update_id)
-                print("归档状态推送成功。")
+    if total_new_count > 0 or position_alerts:
+        msg_blocks = []
+
+        if position_alerts:
+            msg_blocks.append("🚨 <b>Hyperliquid 仓位异动提醒</b> (近30分钟)\n")
+            msg_blocks.extend(position_alerts)
+
+        if all_new_fills_by_wallet:
+            if position_alerts:
+                msg_blocks.append("🔔 <b>成交明细</b>\n")
             else:
-                print("归档状态推送失败。")
-        else:
-            print(f"发现 {total_new_count} 笔新交易！正在发送汇总通知...")
-            msg_blocks = ["🔔 <b>Hyperliquid 交易汇总提醒</b> (近30分钟)\n"]
-            
+                msg_blocks.append("🔔 <b>Hyperliquid 交易汇总提醒</b> (近30分钟)\n")
+
             for addr, data in all_new_fills_by_wallet.items():
                 try:
                     block_text = format_fill_message(data["label"], addr, data["fills"])
                     msg_blocks.append(block_text)
                 except Exception as e:
                     errors.append(f"[{data['label']}] 格式化错误: {e}")
-                
-            full_msg = "\n\n".join(msg_blocks)
-            if errors:
-                full_msg += "\n\n⚠️ <b>获取警告</b>\n" + "\n".join(errors)
-            
-            success = send_long_msg(full_msg)
-            
-            if success:
-                save_seen_trades_and_offset(seen_set, new_update_id)
-                print("交易汇总提醒推送成功。")
-            else:
-                print("交易提醒推送失败，未更新已读交易库。")
+
+        full_msg = "\n\n".join(msg_blocks)
+        if errors:
+            full_msg += "\n\n⚠️ <b>获取警告</b>\n" + "\n".join(errors)
+
+        success = send_long_msg(full_msg)
+        if success:
+            save_seen_trades_and_offset(seen_set, new_update_id, updated_position_state)
+            print("提醒推送成功。")
+        else:
+            print("提醒推送失败，未更新已读交易库与持仓快照。")
     else:
-        print("未发现新交易。正在发送空交易状态推送...")
-        status_msg = "ℹ️ <b>无新交易</b> (近30分钟)"
+        print("未发现新交易或仓位异动。正在发送空状态推送...")
+        status_msg = "ℹ️ <b>无新交易 / 无仓位异动</b> (近30分钟)"
         if errors:
             status_msg += "\n\n⚠️ <b>获取警告</b>\n" + "\n".join(errors)
-            
+
         send_long_msg(status_msg)
-        save_seen_trades_and_offset(seen_set, new_update_id)
+        save_seen_trades_and_offset(seen_set, new_update_id, updated_position_state)
 
 if __name__ == "__main__":
     main()
