@@ -53,22 +53,34 @@ def save_config(config_data):
         print(f"Error saving config: {e}")
 
 def load_seen_trades_and_offset():
-    seen_set = set()
+    seen_tids = {}
     last_update_id = 0
     position_state = {}
     corrupted = False
+    now_ms = int(time.time() * 1000)
     if os.path.exists(DB_FILE):
         try:
             with open(DB_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if isinstance(data, dict):
-                    seen_set = set(data.get("seen_tids", []))
+                    raw_tids = data.get("seen_tids", {})
+                    if isinstance(raw_tids, dict):
+                        # 新格式: {tid: 成交时间(ms)}
+                        for k, v in raw_tids.items():
+                            try:
+                                seen_tids[str(k)] = int(v)
+                            except (ValueError, TypeError):
+                                seen_tids[str(k)] = now_ms
+                    elif isinstance(raw_tids, list):
+                        # 旧格式: [tid, ...]，没有时间信息，统一记为当前时间避免迁移时重播
+                        seen_tids = {str(t): now_ms for t in raw_tids}
                     last_update_id = data.get("last_update_id", 0)
                     ps = data.get("position_state", {})
                     if isinstance(ps, dict):
                         position_state = ps
                 elif isinstance(data, list):
-                    seen_set = set(data)
+                    # 更旧的格式: 纯 list
+                    seen_tids = {str(t): now_ms for t in data}
         except Exception as e:
             print(f"Warning: Failed to load seen_trades.json: {e}")
             corrupted = True
@@ -80,30 +92,32 @@ def load_seen_trades_and_offset():
 
     if not os.path.exists(DB_FILE) and not corrupted:
         return None, 0, {}
-    return seen_set, last_update_id, position_state
+    return seen_tids, last_update_id, position_state
 
-def prune_old_tids(seen_set, max_keep=100000):
+def prune_old_tids(seen_tids, max_age_ms=4 * 60 * 60 * 1000, max_keep=200000):
     """
     防止 seen_trades.json 无限膨胀。
-    Hyperliquid 的 tid 是递增的，值越大表示交易越新。
-    我们只保留最新的 max_keep 个 tid，旧的永远不会再出现在 API 中
-    （因为 API 只返回最近 2 小时的成交记录）。
+    tid 不是递增的（是无序唯一 ID），不能按 tid 数值大小判断新旧，
+    必须按成交时间 time 清理：只保留最近 max_age_ms 内的成交，
+    若仍超过 max_keep 则按时间倒序保留最新的 max_keep 条兜底。
     """
-    if len(seen_set) <= max_keep:
-        return seen_set
-    # tid 是数字字符串，按数值排序，保留最大的（最新的）
-    sorted_tids = sorted(seen_set, key=lambda x: int(x))
-    pruned = set(sorted_tids[-max_keep:])
-    print(f"Pruned {len(seen_set) - len(pruned)} old tids (kept {len(pruned)} newest)")
+    if not seen_tids:
+        return seen_tids
+    now_ms = int(time.time() * 1000)
+    cutoff = now_ms - max_age_ms
+    pruned = {tid: t for tid, t in seen_tids.items() if t >= cutoff}
+    if len(pruned) > max_keep:
+        sorted_items = sorted(pruned.items(), key=lambda kv: kv[1], reverse=True)
+        pruned = dict(sorted_items[:max_keep])
+    print(f"Pruned {len(seen_tids) - len(pruned)} old tids (kept {len(pruned)})")
     return pruned
 
-def save_seen_trades_and_offset(seen_set, last_update_id, position_state=None):
+def save_seen_trades_and_offset(seen_tids, last_update_id, position_state=None):
     import shutil
-    # 定期清理旧 tid，防止文件无限膨胀
-    seen_set = prune_old_tids(seen_set)
-    seen_list = sorted(list(seen_set))
+    # 按成交时间定期清理旧 tid，防止文件无限膨胀
+    seen_tids = prune_old_tids(seen_tids)
     db_data = {
-        "seen_tids": seen_list,
+        "seen_tids": seen_tids,
         "last_update_id": last_update_id
     }
     if position_state is not None:
@@ -115,6 +129,17 @@ def save_seen_trades_and_offset(seen_set, last_update_id, position_state=None):
         shutil.move(temp_file, DB_FILE)
     except Exception as e:
         print(f"Error saving seen trades and offset: {e}")
+
+def _fill_time_ms(fill):
+    """安全获取成交时间（毫秒）。Hyperliquid 正常总会返回 time，这里做兜底。"""
+    t = fill.get("time") or 0
+    try:
+        t = int(t)
+    except (ValueError, TypeError):
+        t = 0
+    if t <= 0:
+        t = int(time.time() * 1000)
+    return t
 
 def html_to_discord_markdown(html_text):
     """
@@ -178,7 +203,7 @@ def send_discord_notification(text):
         print(f"Discord send exception: {e}")
         return False
 
-def process_telegram_commands(last_update_id, seen_set):
+def process_telegram_commands(last_update_id, seen_tids):
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id_str = str(os.getenv("TELEGRAM_CHAT_ID", ""))
     
@@ -246,11 +271,11 @@ def process_telegram_commands(last_update_id, seen_set):
                     
                     fills, err = fetch_user_fills(addr)
                     history_count = 0
-                    if not err and fills and seen_set is not None:
+                    if not err and fills and seen_tids is not None:
                         for f in fills:
                             tid = f.get("tid")
                             if tid:
-                                seen_set.add(str(tid))
+                                seen_tids[str(tid)] = _fill_time_ms(f)
                                 history_count += 1
                                 
                     msg = f"✅ <b>添加成功</b>\n已开始监控：<b>{label}</b>\n<code>{addr}</code>\n"
@@ -579,17 +604,17 @@ def main():
             signal.alarm(0)  # 取消超时
 
 def _main_impl():
-    seen_set, last_update_id, position_state = load_seen_trades_and_offset()
-    new_update_id = process_telegram_commands(last_update_id, seen_set)
+    seen_tids, last_update_id, position_state = load_seen_trades_and_offset()
+    new_update_id = process_telegram_commands(last_update_id, seen_tids)
 
     config = load_config()
     addresses = config.get("monitored_addresses", [])
 
-    first_run = (seen_set is None)
+    first_run = (seen_tids is None)
 
     if first_run:
         print("首次运行检测：正在初始化已读交易库，本次不会发送具体交易提醒以防打扰。")
-        seen_set = set()
+        seen_tids = {}
 
     position_state = position_state or {}
     updated_position_state = dict(position_state)
@@ -649,12 +674,12 @@ def _main_impl():
                 tid_str = str(tid)
 
                 if first_run:
-                    seen_set.add(tid_str)
+                    seen_tids[tid_str] = _fill_time_ms(fill)
                     continue
 
-                if tid_str not in seen_set:
+                if tid_str not in seen_tids:
                     new_fills.append(fill)
-                    seen_set.add(tid_str)
+                    seen_tids[tid_str] = _fill_time_ms(fill)
                     total_new_count += 1
 
             if new_fills:
@@ -663,7 +688,7 @@ def _main_impl():
                     "fills": new_fills
                 }
     if first_run:
-        save_seen_trades_and_offset(seen_set, new_update_id, updated_position_state)
+        save_seen_trades_and_offset(seen_tids, new_update_id, updated_position_state)
         startup_msg = (
             "🤖 <b>Hyperliquid 监控机器人初始化成功！</b>\n\n"
             "系统已将当前历史交易归档，从现在起将实时监听最新仓位变动。\n"
@@ -741,7 +766,7 @@ def _main_impl():
 
         success = send_long_msg(full_msg)
         if success:
-            save_seen_trades_and_offset(seen_set, new_update_id, updated_position_state)
+            save_seen_trades_and_offset(seen_tids, new_update_id, updated_position_state)
             print("提醒推送成功。")
         else:
             print("提醒推送失败，未更新已读交易库与持仓快照。")
@@ -752,7 +777,7 @@ def _main_impl():
             status_msg += "\n\n⚠️ <b>获取警告</b>\n" + "\n".join(errors)
 
         send_long_msg(status_msg)
-        save_seen_trades_and_offset(seen_set, new_update_id, updated_position_state)
+        save_seen_trades_and_offset(seen_tids, new_update_id, updated_position_state)
 
 if __name__ == "__main__":
     main()
