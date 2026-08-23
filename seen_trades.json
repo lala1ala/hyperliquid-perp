@@ -972,7 +972,11 @@
     "734258801010695": 1787461743907,
     "657493593881452": 1787461743907,
     "624612014162891": 1787461743907,
-    "999676398979147": 1787461743907
+    "999676398979147": 1787461743907,
+    "1025756575054358": 1787469093072,
+    "725869878133579": 1787469093072,
+    "963331569100842": 1787469093072,
+    "72425608842304": 1787469093072
   },
   "last_update_id": 104646840,
   "position_state": {
@@ -983,8 +987,8 @@
     },
     "0xeeaf4055e581dae6a4eaea0a66181ecb207787f1": {
       "position_count": 4,
-      "total_notional": 165177.91906100002,
-      "account_value": 32653.104132
+      "total_notional": 155707.60473,
+      "account_value": 34937.568607
     },
     "0x782e432267376f377585fc78092d998f8442ab83": {
       "position_count": 0,
@@ -993,13 +997,13 @@
     },
     "0x45d26f28196d226497130c4bac709d808fed4029": {
       "position_count": 52,
-      "total_notional": 133121109.95674999,
-      "account_value": 21887395.282261
+      "total_notional": 133880158.77174598,
+      "account_value": 21128346.467265
     },
     "0x477296b8f5f5525be26e5c0a82eb0dd24da3949f": {
       "position_count": 4,
-      "total_notional": 290620.82151800004,
-      "account_value": 91575.830851
+      "total_notional": 291354.225851,
+      "account_value": 90842.421318
     },
     "0xdbcc96bcada067864902aad14e029fe7c422f147": {
       "position_count": 0,
@@ -1008,23 +1012,23 @@
     },
     "0x1ce17ec5fe114457a3867b33c0117c15f04ad56d": {
       "position_count": 10,
-      "total_notional": 89053.126547,
-      "account_value": 29786.969802
+      "total_notional": 89533.30050999999,
+      "account_value": 30267.143765
     },
     "0x1bbfb3a33600338d5a948618189649a4588d5fc4": {
       "position_count": 1,
-      "total_notional": 9993822.3703,
-      "account_value": 6069240.492427
+      "total_notional": 10050059.96989,
+      "account_value": 6125478.092017
     },
     "0xbe19541903f64af97bcf8436f4d15bf3a56b8bd1": {
       "position_count": 6,
-      "total_notional": 10843656.204018999,
-      "account_value": 2738737.347457
+      "total_notional": 10916714.246193,
+      "account_value": 2665679.305283
     },
     "0x7c976f00e84db0b44f945fc6d7fad34b43150a1a": {
       "position_count": 1,
-      "total_notional": 1772490.43072,
-      "account_value": 147683.068401
+      "total_notional": 1776450.21012,
+      "account_value": 151642.847801
     },
     "0xb0a55f13d22f66e6d495ac98113841b2326e9540": {
       "position_count": 0,
@@ -1033,8 +1037,8 @@
     },
     "0xfdf891f2b214a4c9374d26595ec6d4080262e381": {
       "position_count": 6,
-      "total_notional": 6582886.38597,
-      "account_value": 1048832.284035
+      "total_notional": 6629633.46194,
+      "account_value": 1088559.360005
     },
     "0xdd14cee0b16ccde99e5fcf4956f7d611ab07d07a": {
       "position_count": 0,
@@ -1043,13 +1047,13 @@
     },
     "0x77fee2df7bad4f1db93052fa82bf78eaab771a16": {
       "position_count": 5,
-      "total_notional": 930576.543131,
-      "account_value": 338509.649564
+      "total_notional": 935022.7954859999,
+      "account_value": 334063.397209
     },
     "0xdd9f274410c8c704bdbb599dce6c4fb34be4f50a": {
       "position_count": 1,
-      "total_notional": 19480525.01568,
-      "account_value": 1951994.89125
+      "total_notional": 19524044.90178,
+      "account_value": 1952686.089441
     },
     "0xc59498175d6d317642aeb97f895a7ce1aa992191": {
       "position_count": 0,
@@ -1063,8 +1067,8 @@
     },
     "0xf21d494bb47339f399267c5519cbe11da0753b2d": {
       "position_count": 1,
-      "total_notional": 651985.801,
-      "account_value": 209880.027903
+      "total_notional": 659886.4885,
+      "account_value": 217780.715403
     },
     "0xfeec88b13fc0be31695069f02bac18538a154e9c": {
       "position_count": 0,
@@ -1073,8 +1077,8 @@
     },
     "0x404ca2035b37bf2e83505134ebcf8d03babb5f03": {
       "position_count": 18,
-      "total_notional": 10604296.89843,
-      "account_value": 1260127.043227
+      "total_notional": 10668408.634730002,
+      "account_value": 1267447.408322
     }
   }
 }
