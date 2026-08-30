@@ -83,6 +83,10 @@
     {
       "address": "0x08c14b32c8a48894e4b933090ebcc9ce33b21135",
       "label": "long alts/BTC high win-rate"
+    },
+    {
+      "address": "0x89636bd66c3082f6e48175d75b9a485df07de77a",
+      "label": "little cap high win-rate"
     }
   ]
 }
