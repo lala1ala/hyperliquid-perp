@@ -79,6 +79,10 @@
     {
       "address": "0x404ca2035b37bf2e83505134ebcf8d03babb5f03",
       "label": "diamond short large draw-down"
+    },
+    {
+      "address": "0x08c14b32c8a48894e4b933090ebcc9ce33b21135",
+      "label": "long alts/BTC high win-rate"
     }
   ]
 }
