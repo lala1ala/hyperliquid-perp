@@ -87,6 +87,10 @@
     {
       "address": "0x89636bd66c3082f6e48175d75b9a485df07de77a",
       "label": "little cap high win-rate"
+    },
+    {
+      "address": "0x9bbb821a51d9c0ef24dd8592e9caad7fc469bbf2",
+      "label": "xx large-drawdown"
     }
   ]
 }
