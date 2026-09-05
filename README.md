@@ -47,9 +47,9 @@ git push -u origin main
 4. 点击右上角的 **New repository secret** (新建仓库密钥)。
 5. 分别添加以下两个密钥：
    * **密钥名称**：`TELEGRAM_BOT_TOKEN`
-     * **密钥内容**：`8630179711:AAFiKjLSKWibovjVzZtMv4n55gMH0tAoX2o`
+     * **密钥内容**：`你的机器人Token`（在 [@BotFather](https://t.me/BotFather) 用 `/token` 获取，切勿把真实 Token 写进仓库）
    * **密钥名称**：`TELEGRAM_CHAT_ID`
-     * **密钥内容**：`991021964`
+     * **密钥内容**：`你的Chat ID`（给 [@userinfobot](https://t.me/userinfobot) 发消息获取）
 
 ---
 

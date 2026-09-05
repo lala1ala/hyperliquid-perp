@@ -402,12 +402,22 @@ def fetch_position_state(address):
         "Content-Type": "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
-    try:
-        resp = requests.post(url, json=payload, headers=headers, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception as e:
-        return None, str(e)
+    data = None
+    last_err = ""
+    for attempt in range(3):
+        try:
+            # 连接超时 10s，读超时 30s：clearinghouseState 偶发响应慢，给足时间
+            resp = requests.post(url, json=payload, headers=headers, timeout=(10, 30))
+            resp.raise_for_status()
+            data = resp.json()
+            break
+        except Exception as e:
+            last_err = str(e)
+            print(f"[{address}] position snapshot attempt {attempt+1} failed: {last_err}")
+            time.sleep(2)
+
+    if data is None:
+        return None, f"Failed after 3 attempts. Last error: {last_err}"
 
     position_count = 0
     total_notional = 0.0
@@ -636,7 +646,7 @@ def _main_impl():
         return {"addr": addr, "label": label, "fills": fills, "err": ferr,
                 "pstate": pstate, "perr": perr}
 
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    with ThreadPoolExecutor(max_workers=3) as executor:
         futures = {executor.submit(fetch_single_wallet, w): w for w in addresses}
         for future in as_completed(futures):
             result = future.result()
