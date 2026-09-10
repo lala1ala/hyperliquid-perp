@@ -51,7 +51,19 @@
     "834118526861428": 1789076937271,
     "1051301137545838": 1789076859729,
     "174166544646897": 1789076847701,
-    "338796962358890": 1789076738213
+    "338796962358890": 1789076738213,
+    "404320431114158": 1789083030079,
+    "500036989699771": 1789082924109,
+    "992771796303594": 1789082636101,
+    "240600573385336": 1789082607995,
+    "592881466256676": 1789082579773,
+    "420011884940239": 1789082524929,
+    "291738777863700": 1789082343614,
+    "417497891372122": 1789082254890,
+    "1012272898214349": 1789081804343,
+    "1083087778872775": 1789081787334,
+    "455729062817495": 1789081775500,
+    "139863102758027": 1789081723857
   },
   "last_update_id": 104646843,
   "position_state": {
@@ -62,8 +74,8 @@
     },
     "0xeeaf4055e581dae6a4eaea0a66181ecb207787f1": {
       "position_count": 4,
-      "total_notional": 65979.500722,
-      "account_value": 37698.883643
+      "total_notional": 65779.884827,
+      "account_value": 37803.906258
     },
     "0x782e432267376f377585fc78092d998f8442ab83": {
       "position_count": 0,
@@ -72,13 +84,13 @@
     },
     "0x45d26f28196d226497130c4bac709d808fed4029": {
       "position_count": 52,
-      "total_notional": 136910044.11587,
-      "account_value": 28625045.229807
+      "total_notional": 136364918.43616998,
+      "account_value": 29170170.909507
     },
     "0x477296b8f5f5525be26e5c0a82eb0dd24da3949f": {
       "position_count": 6,
-      "total_notional": 644223.066159,
-      "account_value": 118023.039859
+      "total_notional": 637492.2596809999,
+      "account_value": 124753.763937
     },
     "0xdbcc96bcada067864902aad14e029fe7c422f147": {
       "position_count": 0,
@@ -87,23 +99,23 @@
     },
     "0x1ce17ec5fe114457a3867b33c0117c15f04ad56d": {
       "position_count": 12,
-      "total_notional": 151604.602454,
-      "account_value": 30745.891138
+      "total_notional": 150784.248344,
+      "account_value": 30073.363088
     },
     "0x1bbfb3a33600338d5a948618189649a4588d5fc4": {
       "position_count": 1,
-      "total_notional": 15341747.08652,
-      "account_value": 7238234.899128
+      "total_notional": 15322379.72314,
+      "account_value": 7218867.535748
     },
     "0xbe19541903f64af97bcf8436f4d15bf3a56b8bd1": {
       "position_count": 7,
-      "total_notional": 14225927.532689,
-      "account_value": 3755770.089339
+      "total_notional": 14158711.023027,
+      "account_value": 3822986.599001
     },
     "0x7c976f00e84db0b44f945fc6d7fad34b43150a1a": {
       "position_count": 2,
-      "total_notional": 1790072.09841,
-      "account_value": 179200.905011
+      "total_notional": 1787803.46487,
+      "account_value": 178746.172022
     },
     "0xb0a55f13d22f66e6d495ac98113841b2326e9540": {
       "position_count": 0,
@@ -112,8 +124,8 @@
     },
     "0xfdf891f2b214a4c9374d26595ec6d4080262e381": {
       "position_count": 3,
-      "total_notional": 5188030.38,
-      "account_value": 1448026.557669
+      "total_notional": 5176301.08,
+      "account_value": 1436297.257669
     },
     "0xdd14cee0b16ccde99e5fcf4956f7d611ab07d07a": {
       "position_count": 0,
@@ -122,13 +134,13 @@
     },
     "0x77fee2df7bad4f1db93052fa82bf78eaab771a16": {
       "position_count": 6,
-      "total_notional": 688358.961646,
-      "account_value": 161460.997533
+      "total_notional": 688780.2306499999,
+      "account_value": 160239.728529
     },
     "0xdd9f274410c8c704bdbb599dce6c4fb34be4f50a": {
       "position_count": 2,
-      "total_notional": 44111931.6053,
-      "account_value": 4387186.879437
+      "total_notional": 44038691.33194,
+      "account_value": 4376974.333108
     },
     "0xc59498175d6d317642aeb97f895a7ce1aa992191": {
       "position_count": 0,
@@ -142,8 +154,8 @@
     },
     "0xf21d494bb47339f399267c5519cbe11da0753b2d": {
       "position_count": 2,
-      "total_notional": 2804610.00545,
-      "account_value": 1233878.303204
+      "total_notional": 2780988.576095,
+      "account_value": 1210256.873849
     },
     "0xfeec88b13fc0be31695069f02bac18538a154e9c": {
       "position_count": 0,
@@ -152,13 +164,13 @@
     },
     "0x404ca2035b37bf2e83505134ebcf8d03babb5f03": {
       "position_count": 18,
-      "total_notional": 10040432.982130002,
-      "account_value": 1190797.103831
+      "total_notional": 10012622.814074,
+      "account_value": 1192987.65829
     },
     "0x08c14b32c8a48894e4b933090ebcc9ce33b21135": {
       "position_count": 10,
-      "total_notional": 13471953.841397999,
-      "account_value": 1354175.298356
+      "total_notional": 13454890.170124,
+      "account_value": 1343751.463082
     },
     "0x89636bd66c3082f6e48175d75b9a485df07de77a": {
       "position_count": 0,
