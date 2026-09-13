@@ -7,9 +7,16 @@ on:
   workflow_dispatch:
     # 允许在 GitHub Web UI 中手动触发执行
 
+concurrency:
+  # 30 分钟一跑，避免两次运行重叠时 git push 互相冲突（non-fast-forward）
+  group: hyperliquid-tracker
+  cancel-in-progress: false
+
 jobs:
   run-tracker:
     runs-on: ubuntu-latest
+    # 正常一次约 20 秒；设个硬上限，防止异常时长时间挂着占配额
+    timeout-minutes: 15
 
     permissions:
       # 允许工作流向仓库提交/推送文件 (seen_trades.json + hl_tracker_config.json)
@@ -36,12 +43,14 @@ jobs:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        PYTHONUNBUFFERED: "1"
       run: python hyperliquid_polling_tracker.py
 
     - name: Commit and Push Data Files
       run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        # 用仓库级配置而不是 --global，避免污染 runner 的全局 git 配置
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
         git add seen_trades.json hl_tracker_config.json || true
         if git diff --staged --quiet; then
           echo "No data changes. Skipping commit."
