@@ -1,8 +1,5 @@
 {
   "seen_tids": {
-    "1087218381144": 1793096973087,
-    "327129381690905": 1793096961545,
-    "16903266893032": 1793096944787,
     "737240664118052": 1793097562567,
     "1109883925973439": 1793097432370,
     "694872294990698": 1793097341555,
@@ -184,18 +181,18 @@
     },
     "0xeeaf4055e581dae6a4eaea0a66181ecb207787f1": {
       "position_count": 4,
-      "total_notional": 88387.73117,
-      "account_value": 13512.24104
+      "total_notional": 88497.53639,
+      "account_value": 13554.1955
     },
     "0x782e432267376f377585fc78092d998f8442ab83": {
       "position_count": 1,
-      "total_notional": 169871.0,
-      "account_value": 33743.37987
+      "total_notional": 170046.2,
+      "account_value": 33568.17987
     },
     "0x45d26f28196d226497130c4bac709d808fed4029": {
       "position_count": 51,
-      "total_notional": 141410946.32665795,
-      "account_value": 23625001.256965
+      "total_notional": 141585314.82241797,
+      "account_value": 23450632.761205
     },
     "0x477296b8f5f5525be26e5c0a82eb0dd24da3949f": {
       "position_count": 0,
@@ -209,8 +206,8 @@
     },
     "0x1ce17ec5fe114457a3867b33c0117c15f04ad56d": {
       "position_count": 6,
-      "total_notional": 26583.714700999997,
-      "account_value": 3719.686608
+      "total_notional": 26608.271010999997,
+      "account_value": 3744.242918
     },
     "0x1bbfb3a33600338d5a948618189649a4588d5fc4": {
       "position_count": 0,
@@ -219,13 +216,13 @@
     },
     "0xbe19541903f64af97bcf8436f4d15bf3a56b8bd1": {
       "position_count": 8,
-      "total_notional": 17588123.488188997,
-      "account_value": 6870886.641671
+      "total_notional": 17613362.406581,
+      "account_value": 6845647.723279
     },
     "0x7c976f00e84db0b44f945fc6d7fad34b43150a1a": {
       "position_count": 1,
-      "total_notional": 1869225.51218,
-      "account_value": 191429.711888
+      "total_notional": 1870553.20292,
+      "account_value": 188585.658566
     },
     "0xb0a55f13d22f66e6d495ac98113841b2326e9540": {
       "position_count": 0,
@@ -234,8 +231,8 @@
     },
     "0xfdf891f2b214a4c9374d26595ec6d4080262e381": {
       "position_count": 5,
-      "total_notional": 8787448.26,
-      "account_value": 2085097.815132
+      "total_notional": 8803138.6,
+      "account_value": 2100788.155132
     },
     "0xdd14cee0b16ccde99e5fcf4956f7d611ab07d07a": {
       "position_count": 0,
@@ -244,8 +241,8 @@
     },
     "0x77fee2df7bad4f1db93052fa82bf78eaab771a16": {
       "position_count": 6,
-      "total_notional": 352289.73424799996,
-      "account_value": 133960.320685
+      "total_notional": 352426.45095699996,
+      "account_value": 134057.075976
     },
     "0xdd9f274410c8c704bdbb599dce6c4fb34be4f50a": {
       "position_count": 0,
@@ -264,28 +261,28 @@
     },
     "0xf21d494bb47339f399267c5519cbe11da0753b2d": {
       "position_count": 2,
-      "total_notional": 2684317.048166,
-      "account_value": 1094438.480889
+      "total_notional": 2688065.51988,
+      "account_value": 1098186.952603
     },
     "0xfeec88b13fc0be31695069f02bac18538a154e9c": {
       "position_count": 3,
-      "total_notional": 3813419.353456,
-      "account_value": 415576.433867
+      "total_notional": 3817329.494517,
+      "account_value": 411666.292806
     },
     "0x404ca2035b37bf2e83505134ebcf8d03babb5f03": {
       "position_count": 19,
-      "total_notional": 8110100.564358001,
-      "account_value": 1112686.169739
+      "total_notional": 8118813.760898999,
+      "account_value": 1105131.852246
     },
     "0x08c14b32c8a48894e4b933090ebcc9ce33b21135": {
       "position_count": 10,
-      "total_notional": 8229658.281299,
-      "account_value": 503703.10629
+      "total_notional": 8246949.857078,
+      "account_value": 500401.008785
     },
     "0x89636bd66c3082f6e48175d75b9a485df07de77a": {
       "position_count": 2,
-      "total_notional": 340215.0,
-      "account_value": 68368.352485
+      "total_notional": 340911.0,
+      "account_value": 69064.352485
     },
     "0x9bbb821a51d9c0ef24dd8592e9caad7fc469bbf2": {
       "position_count": 0,
