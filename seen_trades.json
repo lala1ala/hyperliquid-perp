@@ -101,18 +101,18 @@
     },
     "0xeeaf4055e581dae6a4eaea0a66181ecb207787f1": {
       "position_count": 4,
-      "total_notional": 89848.95537000001,
-      "account_value": 13041.675302
+      "total_notional": 89564.032292,
+      "account_value": 12967.08958
     },
     "0x782e432267376f377585fc78092d998f8442ab83": {
       "position_count": 1,
-      "total_notional": 170809.78,
-      "account_value": 32889.815785
+      "total_notional": 170352.8,
+      "account_value": 33346.795785
     },
     "0x45d26f28196d226497130c4bac709d808fed4029": {
       "position_count": 51,
-      "total_notional": 149598088.70251,
-      "account_value": 19622981.731316
+      "total_notional": 149341491.10997897,
+      "account_value": 19879579.323847
     },
     "0x477296b8f5f5525be26e5c0a82eb0dd24da3949f": {
       "position_count": 0,
@@ -126,8 +126,8 @@
     },
     "0x1ce17ec5fe114457a3867b33c0117c15f04ad56d": {
       "position_count": 6,
-      "total_notional": 26521.556920000003,
-      "account_value": 3644.81404
+      "total_notional": 26402.651199000004,
+      "account_value": 3525.908319
     },
     "0x1bbfb3a33600338d5a948618189649a4588d5fc4": {
       "position_count": 0,
@@ -136,13 +136,13 @@
     },
     "0xbe19541903f64af97bcf8436f4d15bf3a56b8bd1": {
       "position_count": 8,
-      "total_notional": 19087938.986936003,
-      "account_value": 5380317.355046
+      "total_notional": 19075602.389097,
+      "account_value": 5392653.952885
     },
     "0x7c976f00e84db0b44f945fc6d7fad34b43150a1a": {
       "position_count": 1,
-      "total_notional": 1883247.78982,
-      "account_value": 188993.02326
+      "total_notional": 1880825.33654,
+      "account_value": 187747.117046
     },
     "0xb0a55f13d22f66e6d495ac98113841b2326e9540": {
       "position_count": 0,
@@ -151,8 +151,8 @@
     },
     "0xfdf891f2b214a4c9374d26595ec6d4080262e381": {
       "position_count": 5,
-      "total_notional": 8460036.763,
-      "account_value": 1971501.077547
+      "total_notional": 8398100.805,
+      "account_value": 1909565.119547
     },
     "0xdd14cee0b16ccde99e5fcf4956f7d611ab07d07a": {
       "position_count": 0,
@@ -161,8 +161,8 @@
     },
     "0x77fee2df7bad4f1db93052fa82bf78eaab771a16": {
       "position_count": 6,
-      "total_notional": 350917.60007499997,
-      "account_value": 138448.145682
+      "total_notional": 350778.72459299996,
+      "account_value": 138161.037164
     },
     "0xdd9f274410c8c704bdbb599dce6c4fb34be4f50a": {
       "position_count": 0,
@@ -176,33 +176,33 @@
     },
     "0x031f72deb03c509af42624ddcd1f63fce5ecb220": {
       "position_count": 1,
-      "total_notional": 423817.70796,
-      "account_value": 59582.15571
+      "total_notional": 423272.54412,
+      "account_value": 59036.99187
     },
     "0xf21d494bb47339f399267c5519cbe11da0753b2d": {
       "position_count": 2,
-      "total_notional": 2764782.9604200004,
-      "account_value": 1173321.627608
+      "total_notional": 2751796.80724,
+      "account_value": 1160335.474428
     },
     "0xfeec88b13fc0be31695069f02bac18538a154e9c": {
       "position_count": 3,
-      "total_notional": 4068436.1961740004,
-      "account_value": 471446.744851
+      "total_notional": 4057423.973381,
+      "account_value": 482458.967644
     },
     "0x404ca2035b37bf2e83505134ebcf8d03babb5f03": {
       "position_count": 19,
-      "total_notional": 8170439.857776999,
-      "account_value": 1124016.116322
+      "total_notional": 8136041.088602001,
+      "account_value": 1124925.480049
     },
     "0x08c14b32c8a48894e4b933090ebcc9ce33b21135": {
       "position_count": 10,
-      "total_notional": 8341979.058873001,
-      "account_value": 517059.706943
+      "total_notional": 8305077.534005,
+      "account_value": 501459.357365
     },
     "0x89636bd66c3082f6e48175d75b9a485df07de77a": {
       "position_count": 3,
-      "total_notional": 293093.1,
-      "account_value": 35221.775597
+      "total_notional": 290812.93,
+      "account_value": 32941.605597
     },
     "0x9bbb821a51d9c0ef24dd8592e9caad7fc469bbf2": {
       "position_count": 0,
