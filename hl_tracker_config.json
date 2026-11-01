@@ -95,6 +95,10 @@
     {
       "address": "0x8e096995c3e4a3f0bc5b3ea1cba94de2aa4d70c9",
       "label": "daidaibtc"
+    },
+    {
+      "address": "0x5f94a51948d2376ad34a6fadfa2544e651b74b96",
+      "label": "slow hand multi"
     }
   ]
 }
