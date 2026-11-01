@@ -91,6 +91,10 @@
     {
       "address": "0x9bbb821a51d9c0ef24dd8592e9caad7fc469bbf2",
       "label": "xx large-drawdown"
+    },
+    {
+      "address": "0x8e096995c3e4a3f0bc5b3ea1cba94de2aa4d70c9",
+      "label": "daidaibtc"
     }
   ]
 }
