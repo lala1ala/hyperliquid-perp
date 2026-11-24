@@ -1,20 +1,5 @@
 {
   "seen_tids": {
-    "139928153281627": 1795494603457,
-    "302092911534899": 1795494524845,
-    "139028068761106": 1795494317213,
-    "818064544163989": 1795494317213,
-    "679937208644616": 1795494305454,
-    "939175440344837": 1795494305454,
-    "744274880447001": 1795494277402,
-    "634791939655115": 1795494277402,
-    "18278879453738": 1795494265803,
-    "471099677287355": 1795494230584,
-    "1059860044479599": 1795494218809,
-    "269558075932073": 1795494206995,
-    "990107326794184": 1795494119625,
-    "817662328941702": 1795494119625,
-    "554585493453273": 1795494013728,
     "272824822928479": 1795496121154,
     "661552107487443": 1795496121154,
     "185111551665142": 1795496117356,
@@ -71,8 +56,6 @@
     "805455849037125": 1795494738935,
     "806647494668832": 1795494738935,
     "122306294990451": 1795494708601,
-    "271885848026310": 1795494647306,
-    "843603636960376": 1795494647306,
     "806466218980204": 1795498184853,
     "271931361137293": 1795498183644,
     "815137774405575": 1795498180707,
@@ -213,7 +196,8 @@
     "1015460069633955": 1795507135764,
     "128867820926101": 1795507135764,
     "70279196237424": 1795507135764,
-    "632702632834225": 1795507135764
+    "632702632834225": 1795507135764,
+    "228459711337246": 1795508949311
   },
   "last_update_id": 104646843,
   "position_state": {
@@ -224,18 +208,18 @@
     },
     "0xeeaf4055e581dae6a4eaea0a66181ecb207787f1": {
       "position_count": 3,
-      "total_notional": 54499.7791,
-      "account_value": 5917.421275
+      "total_notional": 54362.18332,
+      "account_value": 5779.825495
     },
     "0x782e432267376f377585fc78092d998f8442ab83": {
       "position_count": 1,
-      "total_notional": 127162.5,
-      "account_value": 39051.350304
+      "total_notional": 126870.0,
+      "account_value": 39343.850304
     },
     "0x45d26f28196d226497130c4bac709d808fed4029": {
       "position_count": 49,
-      "total_notional": 103517827.42171998,
-      "account_value": 18091317.690958
+      "total_notional": 103091539.88022803,
+      "account_value": 18517605.23245
     },
     "0x477296b8f5f5525be26e5c0a82eb0dd24da3949f": {
       "position_count": 0,
@@ -249,23 +233,23 @@
     },
     "0x1ce17ec5fe114457a3867b33c0117c15f04ad56d": {
       "position_count": 3,
-      "total_notional": 12537.39018,
-      "account_value": 1840.51348
+      "total_notional": 12489.56704,
+      "account_value": 1792.69034
     },
     "0x1bbfb3a33600338d5a948618189649a4588d5fc4": {
       "position_count": 1,
-      "total_notional": 14528421.51894,
-      "account_value": 6919062.070218
+      "total_notional": 14473537.33386,
+      "account_value": 6864177.885138
     },
     "0xbe19541903f64af97bcf8436f4d15bf3a56b8bd1": {
       "position_count": 7,
-      "total_notional": 8946993.253499,
-      "account_value": 3022012.103947
+      "total_notional": 8908880.012888001,
+      "account_value": 3060125.344558
     },
     "0x7c976f00e84db0b44f945fc6d7fad34b43150a1a": {
       "position_count": 1,
-      "total_notional": 1405814.85828,
-      "account_value": 138566.163462
+      "total_notional": 1400504.09532,
+      "account_value": 140071.37307
     },
     "0xb0a55f13d22f66e6d495ac98113841b2326e9540": {
       "position_count": 0,
@@ -274,8 +258,8 @@
     },
     "0xfdf891f2b214a4c9374d26595ec6d4080262e381": {
       "position_count": 3,
-      "total_notional": 1390327.7246730002,
-      "account_value": 390176.615207
+      "total_notional": 1382108.5010550001,
+      "account_value": 381957.391589
     },
     "0xdd14cee0b16ccde99e5fcf4956f7d611ab07d07a": {
       "position_count": 0,
@@ -284,8 +268,8 @@
     },
     "0x77fee2df7bad4f1db93052fa82bf78eaab771a16": {
       "position_count": 5,
-      "total_notional": 281058.945648,
-      "account_value": 78581.833503
+      "total_notional": 280660.096228,
+      "account_value": 78046.794923
     },
     "0xdd9f274410c8c704bdbb599dce6c4fb34be4f50a": {
       "position_count": 0,
@@ -299,28 +283,28 @@
     },
     "0x031f72deb03c509af42624ddcd1f63fce5ecb220": {
       "position_count": 2,
-      "total_notional": 2109317.07462,
-      "account_value": 315620.585175
+      "total_notional": 2100568.90298,
+      "account_value": 306872.413535
     },
     "0xf21d494bb47339f399267c5519cbe11da0753b2d": {
       "position_count": 2,
-      "total_notional": 701544.1266600001,
-      "account_value": 92942.026833
+      "total_notional": 700104.86752,
+      "account_value": 91502.767693
     },
     "0xfeec88b13fc0be31695069f02bac18538a154e9c": {
       "position_count": 2,
-      "total_notional": 2992502.9704,
-      "account_value": 300354.843899
+      "total_notional": 2985596.61608,
+      "account_value": 307261.198219
     },
     "0x404ca2035b37bf2e83505134ebcf8d03babb5f03": {
       "position_count": 22,
-      "total_notional": 6482033.330295,
-      "account_value": 912668.553584
+      "total_notional": 6446730.243887002,
+      "account_value": 907274.534897
     },
     "0x08c14b32c8a48894e4b933090ebcc9ce33b21135": {
       "position_count": 9,
-      "total_notional": 3418740.0349830003,
-      "account_value": 594512.064755
+      "total_notional": 3416153.8916240004,
+      "account_value": 591651.425396
     },
     "0x89636bd66c3082f6e48175d75b9a485df07de77a": {
       "position_count": 0,
@@ -334,18 +318,18 @@
     },
     "0x8e096995c3e4a3f0bc5b3ea1cba94de2aa4d70c9": {
       "position_count": 2,
-      "total_notional": 17801299.21802,
-      "account_value": 2860383.117001
+      "total_notional": 17734103.4476,
+      "account_value": 2927578.887421
     },
     "0x5f94a51948d2376ad34a6fadfa2544e651b74b96": {
       "position_count": 19,
-      "total_notional": 14273279.366178999,
-      "account_value": 2177848.296862
+      "total_notional": 14219645.291336002,
+      "account_value": 2155858.774399
     },
     "0x6859da14835424957a1e6b397d8026b1d9ff7e1e": {
       "position_count": 19,
-      "total_notional": 19395577.566482,
-      "account_value": 2077385.598402
+      "total_notional": 19317972.049784,
+      "account_value": 2154991.1151
     }
   }
 }
